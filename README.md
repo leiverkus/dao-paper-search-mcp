@@ -26,6 +26,7 @@ The DAO-specific sources (Zenon DAI, IAA Publications, ADAJ) are the original ra
 | `search_arxiv` | arXiv (preprints, esp. Digital Humanities methods) | implemented (Sprint 2) |
 | `search_core` | CORE (open-access full-text aggregator) | implemented (Sprint 3) |
 | `search_zenodo` | Zenodo (data, software, preprints, every record gets a DOI) | implemented (Sprint 3) |
+| `search_biorxiv` | bioRxiv + medRxiv preprints (via Europe PMC) — aDNA / paleogenomic currency | implemented (Sprint 4) |
 
 ### Tier 2 (planned, DAO-specific)
 

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Pfad II Sprint 4 — preprint currency)
+- `search_biorxiv` MCP tool for bioRxiv + medRxiv preprints. Backend
+  is Europe PMC's `SRC:PPR`-filtered search (bioRxiv's native
+  `api.biorxiv.org` doesn't support free-text queries); the adapter
+  filters Europe PMC results to bioRxiv/medRxiv content client-side
+  via `journalTitle` so callers don't pick up ResearchSquare / OSF /
+  SSRN preprints they didn't ask for. `include_medrxiv` toggle
+  (default True) gates medRxiv content. Primary use case: Levant
+  aDNA / paleogenomic preprints (Lazaridis, Feldman, Harney, Reich
+  Lab) that sit on bioRxiv 6–12 months before journal publication.
+  25 unit tests in `tests/test_biorxiv.py`.
+- `Identifiers.europepmc_id` field. Inline-citation builder gains a
+  `europepmc.org/article/PPR/{id}` fallback below CORE for very-recent
+  preprints whose DOI hasn't reached Europe PMC's index yet. Most
+  records still resolve via `10.1101/...` DOI in practice.
+
 ### Added (Pfad II Sprint 3 — OA aggregator + research repository)
 - `search_core` MCP tool against `api.core.ac.uk/v3/search/works`.
   Requires `CORE_API_KEY` (free tier registerable at
