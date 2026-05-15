@@ -1,12 +1,12 @@
 # dao-paper-search-mcp
 
-Vertical MCP server for the **DAO** domain (Digital Antiquity Oldenburg) — Levant archaeology, biblical archaeology, Bronze/Iron Age. Complementary to [`paper-search-mcp`](https://github.com/openags/paper-search-mcp), not a replacement.
+DAO-centred MCP server for academic research — Levant archaeology, biblical archaeology, Bronze/Iron Age, plus a curated cross-platform paper-search surface for the wider humanities. Started as a vertical complement to [`paper-search-mcp`](https://github.com/openags/paper-search-mcp); now also reimplements the cross-platform adapters that matter for DAO/DH workflows (Crossref, OpenAlex, Semantic Scholar, arXiv, CORE, Zenodo) so every hit carries the same pre-rendered `inline_citation` block.
 
-`paper-search-mcp` covers ~20 horizontal scholarly platforms (Crossref, OpenAlex, Semantic Scholar, arXiv, …). It does **not** cover Zenon DAI, IAA Publications, ADAJ, IxTheo, Propylaeum — the German/Hebrew/Arabic-language sources that are the DAO core domain. This server fills that gap.
+The DAO-specific sources (Zenon DAI, IAA Publications, ADAJ) are the original raison d'être and remain the strongest reason to use this server for Levantine archaeology. The horizontal adapters reduce the need to run `paper-search-mcp` alongside.
 
 ## Sources
 
-### Tier 1 (MVP)
+### DAO-specific (Tier 1, original scope)
 
 | Tool | Source | Status |
 |---|---|---|
@@ -16,7 +16,18 @@ Vertical MCP server for the **DAO** domain (Digital Antiquity Oldenburg) — Lev
 | `resolve_author` | Wikidata SPARQL + local override list + GND fallback | implemented |
 | `resolve_site` | iDAI.gazetteer (DAI's authoritative place register) | implemented |
 
-### Tier 2 (planned)
+### Cross-platform (Pfad II — selective `paper-search-mcp` substitution)
+
+| Tool | Source | Status |
+|---|---|---|
+| `search_crossref` | Crossref (~150M DOI-bearing scholarly works) | implemented (Sprint 1) |
+| `search_openalex` | OpenAlex (~250M works, broadest open scholarly graph) | implemented (Sprint 1) |
+| `search_semantic_scholar` | Semantic Scholar (citation graph, recommendations) | planned (Sprint 2) |
+| `search_arxiv` | arXiv (preprints, esp. Digital Humanities methods) | planned (Sprint 2) |
+| `search_core` | CORE (open-access full-text aggregator) | planned (Sprint 3) |
+| `search_zenodo` | Zenodo (data, software, preprints, every record gets a DOI) | planned (Sprint 3) |
+
+### Tier 2 (planned, DAO-specific)
 
 Propylaeum, IxTheo, Persée, OpenEdition, Gnomon Online, TOCS-IN — one adapter per follow-up PR.
 

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Pfad II Sprint 1 — cross-platform adapters)
+- `search_crossref` MCP tool against `api.crossref.org/works`. Polite-pool
+  User-Agent with `mailto:` for higher rate limits. Every hit carries a DOI
+  so `inline_citation.markdown_recommended` is always `[(Author Year)](https://doi.org/…)`.
+  Personal authors only — corporate authors are dropped from the authors
+  list because they distort the Author-Year citation form. Items without
+  a DOI are dropped entirely. JATS markup in abstracts is stripped to
+  plain text. 21 unit tests in `tests/test_crossref.py`.
+- `search_openalex` MCP tool against `api.openalex.org/works`. Polite-pool
+  via `mailto=` query parameter. DOI URLs (`https://doi.org/10.x/y`) are
+  normalised to bare DOI form; OpenAlex Work IDs are stripped to the
+  `W<digits>` form. Abstracts are reconstructed from OpenAlex's inverted
+  index (`{word: [positions]}`) into plain text. Authorships are flipped
+  from "Given Family" to "Family, Given" so the Author-Year builder picks
+  the correct family name. Hits without either DOI or OpenAlex ID are
+  dropped — no fabricated anchors. 19 unit tests in `tests/test_openalex.py`.
+
 ### Added
 - `inline_citation` block on every `DAOPaper`: pre-rendered Markdown with
   three variants (`markdown_authoryear` / `markdown_domain` /
