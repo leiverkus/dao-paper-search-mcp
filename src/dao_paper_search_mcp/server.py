@@ -18,6 +18,7 @@ from .adapters import crossref as _crossref
 from .adapters import iaa as _iaa
 from .adapters import openalex as _openalex
 from .adapters import semantic_scholar as _semantic_scholar
+from .adapters import zenodo as _zenodo
 from .adapters import zenon as _zenon
 from .resolvers import gazetteer as _gazetteer
 from .resolvers import wikidata_author as _author
@@ -51,6 +52,7 @@ _openalex.register(mcp)
 _semantic_scholar.register(mcp)
 _arxiv.register(mcp)
 _core.register(mcp)
+_zenodo.register(mcp)
 _author.register(mcp)
 _gazetteer.register(mcp)
 
