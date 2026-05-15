@@ -12,6 +12,7 @@ import sys
 from mcp.server.fastmcp import FastMCP
 
 from .adapters import adaj as _adaj
+from .adapters import arxiv as _arxiv
 from .adapters import crossref as _crossref
 from .adapters import iaa as _iaa
 from .adapters import openalex as _openalex
@@ -47,6 +48,7 @@ _adaj.register(mcp)
 _crossref.register(mcp)
 _openalex.register(mcp)
 _semantic_scholar.register(mcp)
+_arxiv.register(mcp)
 _author.register(mcp)
 _gazetteer.register(mcp)
 
