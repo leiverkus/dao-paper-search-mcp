@@ -22,8 +22,8 @@ The DAO-specific sources (Zenon DAI, IAA Publications, ADAJ) are the original ra
 |---|---|---|
 | `search_crossref` | Crossref (~150M DOI-bearing scholarly works) | implemented (Sprint 1) |
 | `search_openalex` | OpenAlex (~250M works, broadest open scholarly graph) | implemented (Sprint 1) |
-| `search_semantic_scholar` | Semantic Scholar (citation graph, recommendations) | planned (Sprint 2) |
-| `search_arxiv` | arXiv (preprints, esp. Digital Humanities methods) | planned (Sprint 2) |
+| `search_semantic_scholar` | Semantic Scholar (citation graph, recommendations) | implemented (Sprint 2) |
+| `search_arxiv` | arXiv (preprints, esp. Digital Humanities methods) | implemented (Sprint 2) |
 | `search_core` | CORE (open-access full-text aggregator) | planned (Sprint 3) |
 | `search_zenodo` | Zenodo (data, software, preprints, every record gets a DOI) | planned (Sprint 3) |
 

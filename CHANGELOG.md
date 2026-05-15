@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Pfad II Sprint 2 — citation graph + preprints)
+- `search_semantic_scholar` MCP tool against
+  `api.semanticscholar.org/graph/v1/paper/search`. Optional API key
+  via `SEMANTIC_SCHOLAR_API_KEY` env var lifts the public bucket's
+  ~100-req/min ceiling. About 70% of hits carry a DOI; the rest are
+  identified via the ArXiv ID (routed to the new `Identifiers.arxiv_id`
+  field) or the S2 paperId. `citationCount` is surfaced via
+  `audit.verification_note` as a soft ranking signal. 19 unit tests
+  in `tests/test_semantic_scholar.py`.
+- `search_arxiv` MCP tool against `export.arxiv.org/api/query`.
+  Atom XML parsed with stdlib ElementTree (no new dependency). Naïve
+  free-text queries are auto-wrapped in `all:` so the agent doesn't
+  need to know arXiv's Lucene-style prefixes; power users can still
+  pass the full DSL. Year filtering is encoded as
+  `submittedDate:[…]` ANDed into search_query because arXiv has no
+  separate year parameter. Version suffixes (`v1`, `v2`) are stripped
+  from the canonical arXiv ID. When a preprint gained a journal DOI
+  later (`arxiv:doi`), the DOI wins primary_url. 16 unit tests in
+  `tests/test_arxiv.py`.
+- `Identifiers.semantic_scholar_id` and `Identifiers.arxiv_id` fields
+  on the schema. Inline-citation builder gains URL fallbacks for both,
+  with arXiv ranked above S2 because arxiv.org is the source
+  repository for preprints while S2 is a pure indexer — when a paper
+  has both, arxiv.org is the canonical anchor.
+
 ### Added (Pfad II Sprint 1 — cross-platform adapters)
 - `search_crossref` MCP tool against `api.crossref.org/works`. Polite-pool
   User-Agent with `mailto:` for higher rate limits. Every hit carries a DOI
