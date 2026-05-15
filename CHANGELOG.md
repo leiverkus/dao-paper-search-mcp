@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `search_adaj` MCP tool for the DoA Publication Archive
+  (publication.doa.gov.jo). Covers ADAJ, SHAJ, Munjazat, JERD, and
+  Athar — broader than the briefing assumed. Year filtering is applied
+  client-side because the upstream GET search ignores year parameters.
 - `search_iaa` MCP tool for IAA Publications. **MVP-incomplete**: the
   IAA backend currently renders search results client-side via
   JavaScript, so the tool raises `IAAUnavailableError` rather than

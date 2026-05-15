@@ -12,7 +12,7 @@ Vertical MCP server for the **DAO** domain (Digital Antiquity Oldenburg) — Lev
 |---|---|---|
 | `search_zenon` | Zenon DAI (~1M records, multilingual DE/EN/FR/IT/HE/AR) | implemented |
 | `search_iaa` | IAA Publications (Reports, ʿAtiqot, HA-ESI) | MVP-incomplete (see below) |
-| `search_adaj` | ADAJ — Annual of the Department of Antiquities of Jordan | implemented |
+| `search_adaj` | DoA Publication Archive (ADAJ, SHAJ, Munjazat, JERD, Athar) | implemented |
 | `resolve_author` | Wikidata SPARQL + local override list + GND fallback | implemented |
 
 ### Tier 2 (planned)

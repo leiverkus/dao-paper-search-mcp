@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>Search</title>
+    <link href="/Content/bootstrap.min.css" rel="stylesheet" />
+    <link href="/Content/fontawesome/css/all.min.css" rel="stylesheet" />
+    <link href="/Content/business-frontpage.css" rel="stylesheet" />
+    <link href="/Content/Site.css" rel="stylesheet" />
+    
+    <link href="/Content/PagedList.css" rel="stylesheet" type="text/css" />
+
+</head>
+<body>
+        <!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <div class="container">
+        <a class="navbar-brand" href="/">DoA Publication Archive</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarResponsive">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="/">
+                        Home
+                        <span class="sr-only">(current)</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    
+                    <a class="nav-link" href="http://www.doa.gov.jo/contents/About-us.aspx" target="_blank">About</a>
+                    
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/Browse">Browse Publication</a>
+                </li>
+                <li class="nav-item menu-seperator d-flex align-items-center">
+                    |
+                </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Account/Login">Login</a>
+                        </li>
+
+            </ul>
+        </div>
+    </div>
+</nav>
+
+
+    <!-- Page Content -->
+    <div class="container h-100 footer-padding">
+        <form class="search" action="/Publications/Search" method="get">
+            <div class="row pt-4">
+                <div class="col-sm-9 d-flex">
+                    <nav aria-label="breadcrumb" class="align-self-center breadcrumb-nav">
+                        <ol class="breadcrumb">
+                            
+    <li class="breadcrumb-item"><a href="/">Home</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Search Result</li>
+
+                        </ol>
+                    </nav>
+                </div>
+                <div class="col-sm-3 d-flex justify-content-end header-search-container">
+                    <div class="input-group">
+                        <input name="SearchTerm" id="SearchTerm" autocomplete="off" type="text" class="form-control" placeholder="Search Annuals" aria-label="Search Annuals" aria-describedby="button-addon2">
+                        <div class="input-group-append">
+                            <button type="submit" class="btn btn-outline-secondary"><i class="fa fa-search"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+            <div class="row">
+                <div class="col-sm-12">
+                    <hr class="search-hr" />
+                </div>
+            </div>
+            
+
+<div class="row">
+    <!-- filter -->
+    <div class="col-sm-3 pr-4">
+
+        <form class="search" action="/Publications/Search" method="get">
+            <div class="row search-result-filter-top">
+                <div class="col-12">
+                    <h5>Search Term</h5>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <div class="form-group">
+                        <input type="text" class="form-control" name="SearchTerm" id="SearchTerm" autocomplete="off" value="Negev">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <h5>Publication Date</h5>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-6">
+                    <div class="form-group">
+                        <label for="usr">From:</label>
+                        <input type="text" placeholder="From year" class="form-control" name="from" id="from" autocomplete="off">
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="form-group">
+                        <label for="pwd">To:</label>
+                        <input type="text" placeholder="To year" class="form-control" name="to" id="to" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <h5>Publication Type</h5>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <select class="form-control" data-val="true" data-val-number="The field PublicationTypeId must be a number." data-val-required="The PublicationTypeId field is required." id="PublicationTypeId" name="PublicationTypeId"><option selected="selected" value="0">Select</option>
+<option value="1">ADAJ</option>
+<option value="2">SHAJ</option>
+<option value="3">Munjazat</option>
+<option value="4">Journal of Epigraphy &amp; Rock Drawings</option>
+<option value="5">Athar</option>
+<option value="6">Others</option>
+</select>
+                </div>
+            </div>
+            <div class="row">
+                &nbsp;
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <button type="submit" class="btn btn-light btn-outline-dark">Search</button>
+                </div>
+            </div>
+        </form>
+
+    </div>
+    <!--/filter -->
+    <!-- result -->
+    <div class="col-sm-9">
+                <div class="row">
+                    <div class="col-12">
+                        <h5 class="search-result-header">Showing 1 - 10 of 419 search results</h5>
+                    </div>
+                </div>
+                            <div class="row">
+                                <div class="col-12 search-result">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <span class="search-result-publication-type">Article</span>
+                                            <a class="float-right search-result-download" target="_blank" href="/uploads/publications/25/SHAJ_10-597-602.pdf">Download</a>
+                                        </div>
+                                        <div class="col-12">
+                                            <a class="search-result-title" href="/Publications/ViewChapterPublic/212">Judah Versus Edom in the Eastern Negev</a>
+                                            <span class="search-result-year">2009</span> /  <span class="search-result-pages-count">(6 pages)</span>
+                                        </div>
+                                        <div class="col-12">
+                                                    <a class="search-result-author" href="/Publications/AdvancedSearch?postPack=true&amp;SelectedAuthors=75">Itzhaq Beit-Arieh</a>
+
+                                        </div>
+                                        <div class="col-12">
+                                            <i>from: </i>  <a class="search-result-publication" href="/Publications/ViewPublic/25">Studies in the History and Archaeology of Jordan 10 / <i>(SHAJ)</i></a>
+                                        </div>
+                                    </div>
+
+                                    <hr />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12 search-result">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <span class="search-result-publication-type">Article</span>
+                                            <a class="float-right search-result-download" target="_blank" href="/uploads/publications/130/SHAJ_7-205-210.pdf">Download</a>
+                                        </div>
+                                        <div class="col-12">
+                                            <a class="search-result-title" href="/Publications/ViewChapterPublic/991">Tracing the course of EB IV pastoralism and sedentism in Transjordan and the Negev</a>
+                                            <span class="search-result-year">2001</span> /  <span class="search-result-pages-count">(6 pages)</span>
+                                        </div>
+                                        <div class="col-12">
+                                                    <a class="search-result-author" href="/Publications/AdvancedSearch?postPack=true&amp;SelectedAuthors=923">Walter E. Rast</a>
+
+                                        </div>
+                                        <div class="col-12">
+                                            <i>from: </i>  <a class="search-result-publication" href="/Publications/ViewPublic/130">Studies in the History and Archaeology of Jordan 07 / <i>(SHAJ)</i></a>
+                                        </div>
+                                    </div>
+
+                                    <hr />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12 search-result">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <span class="search-result-publication-type">Article</span>
+                                            <a class="float-right search-result-download" target="_blank" href="/uploads/publications/193/SHAJ_7--205-210.pdf">Download</a>
+                                        </div>
+                                        <div class="col-12">
+                                            <a class="search-result-title" href="/Publications/ViewChapterPublic/1459">Tracing the course of EB IV pastoralism and sedentism in Transjordan and the Negev</a>
+                                            <span class="search-result-year">2001</span> /  <span class="search-result-pages-count">(6 pages)</span>
+                                        </div>
+                                        <div class="col-12">
+                                                    <a class="search-result-author" href="/Publications/AdvancedSearch?postPack=true&amp;SelectedAuthors=923">Walter E. Rast</a>
+
+                                        </div>
+                                        <div class="col-12">
+                                            <i>from: </i>  <a class="search-result-publication" href="/Publications/ViewPublic/193">Studies in the History and Archaeology of Jordan 07 / <i>(SHAJ)</i></a>
+                                        </div>
+                                    </div>
+
+                                    <hr />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12 search-result">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <span class="search-result-publication-type">Article</span>
+                                            <a class="float-right search-result-download" target="_blank" href="/uploads/publications/128/ADAJ_1984_28-225-248.pdf">Download</a>
+                                        </div>
+                                        <div class="col-12">
+                                            <a class="search-result-title" href="/Publications/ViewChapterPublic/2117">The Negev Model for Paleoclimatic Change and Human Adaptation in the Levant and Its Relevance for the Paleolithic of the Wadi el Hasa (West-Central Jordan) </a>
+                                            <span class="search-result-year">1984</span> /  <span class="search-result-pages-count">(24 pages)</span>
+                                        </div>
+                                        <div class="col-12">
+                                                    <a class="search-result-author" href="/Publications/AdvancedSearch?postPack=true&amp;SelectedAuthors=420">Geoffrey A. Clark</a>
+
+                                        </div>
+                                        <div class="col-12">
+                                            <i>from: </i>  <a class="search-result-publication" href="/Publications/ViewPublic/128">Annual of the Department of Antiquities of Jordan 28 / <i>(ADAJ)</i></a>
+                                        </div>
+                                    </div>
+
+                                    <hr />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12 search-result">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <span class="search-result-publication-type">Article</span>
+                                            <a class="float-right search-result-download" target="_blank" href="/uploads/publications/15/SHAJ XII-561-585.pdf">Download</a>
+                                        </div>
+                                        <div class="col-12">
+                                            <a class="search-result-title" href="/Publications/ViewChapterPublic/28">A Syrian Goblet at Khirbat Iskandar, Jordan: A Study of Interconnectivity in the EB III/IV Period</a>
+                                            <span class="search-result-year">2016</span> /  <span class="search-result-pages-count">(25 pages)</span>
+                                        </div>
+                                        <div class="col-12">
+
+                                        </div>
+                                        <div class="col-12">
+                                            <i>from: </i>  <a class="search-result-publication" href="/Publications/ViewPublic/15">Studies in the History and Archaeology of Jordan 12 / <i>(SHAJ)</i></a>
+                                        </div>
+                                    </div>
+
+                                    <hr />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12 search-result">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <span class="search-result-publication-type">Article</span>
+                                            <a class="float-right search-result-download" target="_blank" href="/uploads/publications/15/SHAJ XII-747-763.pdf">Download</a>
+                                        </div>
+                                        <div class="col-12">
+                                            <a class="search-result-title" href="/Publications/ViewChapterPublic/34">A Palatial Quarter in Petra: Preliminary Results of the North-Eastern Petra Project</a>
+                                            <span class="search-result-year">2016</span> /  <span class="search-result-pages-count">(17 pages)</span>
+                                        </div>
+                                        <div class="col-12">
+
+                                        </div>
+                                        <div class="col-12">
+                                            <i>from: </i>  <a class="search-result-publication" href="/Publications/ViewPublic/15">Studies in the History and Archaeology of Jordan 12 / <i>(SHAJ)</i></a>
+                                        </div>
+                                    </div>
+
+                                    <hr />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12 search-result">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <span class="search-result-publication-type">Article</span>
+                                            <a class="float-right search-result-download" target="_blank" href="/uploads/publications/26/ADAJ_2013_57-105-123.pdf">Download</a>
+                                        </div>
+                                        <div class="col-12">
+                                            <a class="search-result-title" href="/Publications/ViewChapterPublic/45">Brown University Petra Archaeological Project: The 2011 and 2012 Petra Area and Wādī Silaysil Survey</a>
+                                            <span class="search-result-year">2013</span> /  <span class="search-result-pages-count">(19 pages)</span>
+                                        </div>
+                                        <div class="col-12">
+
+                                        </div>
+                                        <div class="col-12">
+                                            <i>from: </i>  <a class="search-result-publication" href="/Publications/ViewPublic/26">Annual of the Department of Antiquities of Jordan 57 / <i>(ADAJ)</i></a>
+                                        </div>
+                                    </div>
+
+                                    <hr />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12 search-result">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <span class="search-result-publication-type">Article</span>
+                                            <a class="float-right search-result-download" target="_blank" href="/uploads/publications/26/ADAJ_2013_57-337-357.pdf">Download</a>
+                                        </div>
+                                        <div class="col-12">
+                                            <a class="search-result-title" href="/Publications/ViewChapterPublic/61">‘Awja Sites: Supplementary Investigations of Neolithic Open Sanctuaries in Southernmost Jordan</a>
+                                            <span class="search-result-year">2013</span> /  <span class="search-result-pages-count">(21 pages)</span>
+                                        </div>
+                                        <div class="col-12">
+
+                                        </div>
+                                        <div class="col-12">
+                                            <i>from: </i>  <a class="search-result-publication" href="/Publications/ViewPublic/26">Annual of the Department of Antiquities of Jordan 57 / <i>(ADAJ)</i></a>
+                                        </div>
+                                    </div>
+
+                                    <hr />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12 search-result">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <span class="search-result-publication-type">Article</span>
+                                            <a class="float-right search-result-download" target="_blank" href="/uploads/publications/28/SHAJ_2-67-77.pdf">Download</a>
+                                        </div>
+                                        <div class="col-12">
+                                            <a class="search-result-title" href="/Publications/ViewChapterPublic/120">Late Pleistocene Environment and Paleolithic Adaptions in Southern Jordan  </a>
+                                            <span class="search-result-year">1985</span> /  <span class="search-result-pages-count">(11 pages)</span>
+                                        </div>
+                                        <div class="col-12">
+                                                    <a class="search-result-author" href="/Publications/AdvancedSearch?postPack=true&amp;SelectedAuthors=270">Donald O. Henry </a>
+
+                                        </div>
+                                        <div class="col-12">
+                                            <i>from: </i>  <a class="search-result-publication" href="/Publications/ViewPublic/28">Studies in the History and Archaeology of Jordan 02 / <i>(SHAJ)</i></a>
+                                        </div>
+                                    </div>
+
+                                    <hr />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12 search-result">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <span class="search-result-publication-type">Article</span>
+                                            <a class="float-right search-result-download" target="_blank" href="/uploads/publications/28/SHAJ_2-109-115.pdf">Download</a>
+                                        </div>
+                                        <div class="col-12">
+                                            <a class="search-result-title" href="/Publications/ViewChapterPublic/125">The Enviromental History of the Azraq Basin</a>
+                                            <span class="search-result-year">1985</span> /  <span class="search-result-pages-count">(7 pages)</span>
+                                        </div>
+                                        <div class="col-12">
+                                                    <a class="search-result-author" href="/Publications/AdvancedSearch?postPack=true&amp;SelectedAuthors=275">Andrew Garrard </a>
+                                                        ,
+                                                    <a class="search-result-author" href="/Publications/AdvancedSearch?postPack=true&amp;SelectedAuthors=278">Brian Byrd</a>
+                                                        ,
+                                                    <a class="search-result-author" href="/Publications/AdvancedSearch?postPack=true&amp;SelectedAuthors=277">Francoise Hivernel </a>
+                                                        ,
+                                                    <a class="search-result-author" href="/Publications/AdvancedSearch?postPack=true&amp;SelectedAuthors=276">Paul Harvey </a>
+
+                                        </div>
+                                        <div class="col-12">
+                                            <i>from: </i>  <a class="search-result-publication" href="/Publications/ViewPublic/28">Studies in the History and Archaeology of Jordan 02 / <i>(SHAJ)</i></a>
+                                        </div>
+                                    </div>
+
+                                    <hr />
+                                </div>
+                            </div>
+                <div>
+<div class="pagination-container"><ul class="pagination"><li class="active"><a>1</a></li><li><a href="/Publications/Search?page=2&amp;SearchTerm=Negev">2</a></li><li><a href="/Publications/Search?page=3&amp;SearchTerm=Negev">3</a></li><li><a href="/Publications/Search?page=4&amp;SearchTerm=Negev">4</a></li><li><a href="/Publications/Search?page=5&amp;SearchTerm=Negev">5</a></li><li><a href="/Publications/Search?page=6&amp;SearchTerm=Negev">6</a></li><li><a href="/Publications/Search?page=7&amp;SearchTerm=Negev">7</a></li><li><a href="/Publications/Search?page=8&amp;SearchTerm=Negev">8</a></li><li><a href="/Publications/Search?page=9&amp;SearchTerm=Negev">9</a></li><li><a href="/Publications/Search?page=10&amp;SearchTerm=Negev">10</a></li><li class="disabled PagedList-ellipses"><a>&#8230;</a></li><li class="PagedList-skipToNext"><a href="/Publications/Search?page=2&amp;SearchTerm=Negev" rel="next">»</a></li><li class="PagedList-skipToLast"><a href="/Publications/Search?page=42&amp;SearchTerm=Negev">»»</a></li></ul></div>                </div>
+
+    </div>
+    <!--/result -->
+</div>
+
+
+
+
+            <!-- /.row -->
+    </div>
+    <!-- /.container -->
+
+        <!-- Footer -->
+<footer class="footer bg-dark d-flex align-items-center">
+    <div class="container ">
+        <form class="search" action="/Account/Register" method="get">
+            <div class="row ">
+                <div class="col-sm-4">
+                    <h6 class="copy-right-footer">Department of Antiquities of Jordan © 2026</h6>
+                    
+                </div>
+                <div class="col-sm-5">
+                </div>
+                <div class="col-sm-3">
+                    <h6 class="join-newsletter-footer">Join Our Newsletter</h6>
+                    <div class="input-group mb-3 footer-newsletter-input-group">
+
+                        <input type="text" id="email" name="email" class="form-control" placeholder="Your Email" aria-label="Email" aria-describedby="button-addon2">
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-secondary" type="submit" id="button-addon2">Subscribe</button>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </form>
+    </div>
+
+</footer>
+
+    <!-- Bootstrap core JavaScript -->
+    <script src="/Scripts/jquery-3.7.1.min.js"></script>
+    <script src="/Scripts/bootstrap.bundle.min.js"></script>
+    
+    <script type="text/javascript">
+        $(document).ready(function () {
+
+            var showChar = 250;  // How many characters are shown by default
+            var ellipsestext = "...";
+            var moretext = "more";
+            var lesstext = "less";
+            $('.more').each(function () {
+                var content = $(this).html();
+
+                if (content.length > showChar) {
+
+                    var c = content.substr(0, showChar);
+                    var h = content.substr(showChar, content.length - showChar);
+
+                    var html = c + '<span class="moreellipses">' + ellipsestext + '&nbsp;</span><span class="morecontent"><span>' + h + '</span>&nbsp;&nbsp;<a href="" class="morelink">' + moretext + '</a></span>';
+
+                    $(this).html(html);
+                }
+
+            });
+
+            $(".morelink").click(function () {
+                if ($(this).hasClass("less")) {
+                    $(this).removeClass("less");
+                    $(this).html(moretext);
+                } else {
+                    $(this).addClass("less");
+                    $(this).html(lesstext);
+                }
+                $(this).parent().prev().toggle();
+                $(this).prev().toggle();
+                return false;
+            });
+        });
+    </script>
+
+</body>
+
+</html>
+ 
