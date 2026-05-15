@@ -228,10 +228,12 @@ def register(mcp: FastMCP) -> None:
         ``inline_citation.markdown_recommended`` verbatim when citing a
         hit — do not reformat to ``[(domain)](url)``. Use
         ``inline_citation.fallback_text`` only when ``primary_url`` is
-        ``null``. For bibliography or reference-list entries, prefer
-        ``inline_citation.markdown_doi`` when present — the visible
-        label is the actual DOI string, useful for cross-reference and
-        BibTeX round-tripping.
+        ``null``. For bibliography or reference-list entries, copy
+        ``inline_citation.markdown_bibliography`` verbatim — it's
+        always set and prefers the DOI string in the visible label
+        when a DOI is registered (falls back gracefully to
+        Author-Year / Domain-Title / plain text otherwise). This is
+        the bibliography counterpart to ``markdown_recommended``.
 
         Args:
             query: free-text query (e.g. ``"Negev fortresses"``).

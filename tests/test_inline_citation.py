@@ -252,6 +252,96 @@ def test_anonymous_skips_authoryear_variant() -> None:
     assert ic.fallback_text == "Anon. 2024"
 
 
+def test_markdown_bibliography_prefers_doi_form_when_doi_present() -> None:
+    """v0.6.2: bibliography variant exists as a context-named pflichtfeld
+    so the agent doesn't have to interpret docstring hints. With a DOI
+    registered it renders the DOI string in the visible label."""
+    ic = build_inline_citation(
+        authors=["Cohen, R."],
+        year=1979,
+        pages=None,
+        title="t",
+        identifiers=Identifiers(doi="10.2307/1356668"),
+        landing_page_url=None,
+        open_access_url=None,
+        audit=_audit(),
+    )
+    assert ic.markdown_bibliography == (
+        "[(10.2307/1356668)](https://doi.org/10.2307/1356668)"
+    )
+    # The body-text recommended stays Author-Year-form.
+    assert ic.markdown_recommended == "[(Cohen 1979)](https://doi.org/10.2307/1356668)"
+
+
+def test_markdown_bibliography_falls_back_through_authoryear_then_domain() -> None:
+    """No DOI → Author-Year link; no Author-Year → Domain-Title; etc."""
+    # No DOI but has author+year — author-year link form.
+    ic = build_inline_citation(
+        authors=["Cohen, R."],
+        year=1979,
+        pages=None,
+        title="t",
+        identifiers=Identifiers(zenon_id="123"),
+        landing_page_url=None,
+        open_access_url=None,
+        audit=_audit(),
+    )
+    assert ic.markdown_bibliography == (
+        "[(Cohen 1979)](https://zenon.dainst.org/Record/123)"
+    )
+    # No DOI, no author-year — domain-title form when title given.
+    ic = build_inline_citation(
+        authors=[],
+        year=None,
+        pages=None,
+        title="An anonymous work",
+        identifiers=Identifiers(),
+        landing_page_url="https://example.org/x",
+        open_access_url=None,
+        audit=_audit(),
+    )
+    assert ic.markdown_bibliography == (
+        "[(example.org — An anonymous work)](https://example.org/x)"
+    )
+
+
+def test_markdown_bibliography_falls_back_to_fallback_text_when_no_url() -> None:
+    """Print-only literature has no link target; both context fields
+    collapse to the plain Author-Year string."""
+    ic = build_inline_citation(
+        authors=["Aharoni, Y."],
+        year=1962,
+        pages="55–60",
+        title=None,
+        identifiers=Identifiers(),
+        landing_page_url=None,
+        open_access_url=None,
+        audit=_audit(),
+    )
+    assert ic.markdown_bibliography == "Aharoni 1962: 55–60"
+    assert ic.markdown_recommended == "Aharoni 1962: 55–60"
+
+
+def test_markdown_bibliography_aggregator_overrides_doi_preference() -> None:
+    """For aggregator hits surfacing the aggregator domain is more
+    important than the DOI, so the cascade switches to Domain-Title.
+    ⚠️-prefix applied automatically."""
+    ic = build_inline_citation(
+        authors=["Cohen, R."],
+        year=1979,
+        pages=None,
+        title="The Iron Age fortresses",
+        identifiers=Identifiers(doi="10.2307/1356668"),
+        landing_page_url="https://www.researchgate.net/publication/123",
+        open_access_url=None,
+        audit=Audit(primary_source=False, aggregator=True, warn_marker=True),
+    )
+    # DOI is still in markdown_doi for callers who want it.
+    assert ic.markdown_doi is not None
+    # But bibliography surfaces the aggregator domain with ⚠️.
+    assert ic.markdown_bibliography.startswith("⚠️[(doi.org — ")
+
+
 def test_markdown_doi_is_none_when_no_doi_present() -> None:
     """Without a DOI there's nothing to put in the DOI label.
     The agent falls back to other variants for bibliography entries."""

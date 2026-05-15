@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-05-15
+
+Structural fix for the bibliography-rendering issue. v0.6.0 added the
+`markdown_doi` variant; v0.6.2 makes the agent actually use it.
+
+Observed in two consecutive daily-driver runs (2026-05-15): the agent
+correctly rendered Author-Year inline citations in the body text but
+kept rendering bibliography entries as `[(doi.org)](url)`. The
+`markdown_doi` field was present in the tool output but the agent
+preferred the domain-form anyway. Docstring instruction
+("prefer markdown_doi for bibliography") was not strong enough to
+overcome the agent's default mental model for footnote-style links.
+
+Output-shape lock-in (again): when prompt hints lose to default
+patterns, the fix is to make the field structurally unambiguous.
+
+### Added
+- `InlineCitation.markdown_bibliography` — **always set**, never None.
+  The bibliography counterpart to `markdown_recommended`. Cascade:
+  DOI-form when DOI present → Author-Year link → Domain-Title link →
+  Domain-only link → plain `fallback_text`. ⚠️-prefix pre-applied for
+  aggregator / warn-flagged hits.
+- 4 new unit tests in `tests/test_inline_citation.py` covering the
+  cascade (DOI → Author-Year → Domain-Title → fallback) and the
+  aggregator override.
+
+### Changed
+- All 10 search-tool docstrings updated: bibliography rendering
+  guidance changed from *"prefer `markdown_doi` when present"* to
+  *"copy `markdown_bibliography` verbatim"*. Stronger signal — one
+  field, one purpose, no field-picking required.
+- `DAOPaper` model docstring and README "Inline citations" section
+  updated to document the new field and its semantics.
+
+### Non-breaking
+Schema extension is additive. `markdown_doi` remains for callers who
+want the raw DOI variant. `markdown_recommended` is unchanged for
+body-text rendering. Existing consumers are unaffected.
+
 ## [0.6.1] - 2026-05-15
 
 Fixes a regression observed in the first v0.6.0 daily-driver run: the
@@ -282,7 +321,8 @@ most relevant to DAO/Digital-Humanities research.
   upstream SSR is restored or a playwright fallback is added post-MVP.
   See README "Known limitations".
 
-[Unreleased]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.6.2...HEAD
+[0.6.2]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.6.2
 [0.6.1]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.6.1
 [0.6.0]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.6.0
 [0.5.0]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.5.0

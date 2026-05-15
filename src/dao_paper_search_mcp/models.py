@@ -116,15 +116,18 @@ class InlineCitation(BaseModel):
     - **Body text:** ``markdown_recommended`` (defaults to Author-Year
       form). Author-Year is empirically what the agent renders when
       URLs and metadata flow together (Qwen 3.6 Plus test, 2026-05-15).
-    - **Web references / domain-anchored citations:**
-      ``markdown_domain_title`` or ``markdown_domain``.
-    - **Bibliography / reference-list entries:** ``markdown_doi`` when
-      a DOI is present — the visible label is the actual DOI string,
-      which is what readers want for cross-reference and BibTeX
-      round-tripping. Falls back to ``markdown_domain`` or
-      ``markdown_authoryear`` when no DOI.
-    - **Aggregator / warn-flagged hits:** ``markdown_recommended``
-      already carries the ⚠️ prefix; no manual re-application needed.
+    - **Bibliography / reference-list entries:** ``markdown_bibliography``
+      (always set). Prefers the DOI form when a DOI is present, so
+      the visible label is the actual DOI string — exactly what
+      scholarly readers want for cross-reference and BibTeX
+      round-tripping. Falls back gracefully through Author-Year,
+      Domain-Title, Domain-only, then plain text when no link target.
+    - **Web references / domain-anchored citations:** the low-level
+      ``markdown_domain_title`` or ``markdown_domain`` fields when a
+      fine-grained choice is needed.
+    - **Aggregator / warn-flagged hits:** both ``markdown_recommended``
+      and ``markdown_bibliography`` already carry the ⚠️ prefix; no
+      manual re-application needed.
     """
 
     primary_url: Optional[HttpUrl] = None
@@ -141,6 +144,7 @@ class InlineCitation(BaseModel):
     markdown_doi: Optional[str] = None
 
     markdown_recommended: str
+    markdown_bibliography: str
     fallback_text: str
 
 
@@ -162,13 +166,17 @@ class DAOPaper(BaseModel):
     ``inline_citation.fallback_text`` when ``primary_url`` is ``null``.
 
     For bibliography / reference-list entries (the numbered "Zitierte
-    Quellen" section at the end of a research-stand document), prefer
-    ``inline_citation.markdown_doi`` when present — it renders the DOI
-    string itself in the visible label (e.g.
+    Quellen" section at the end of a research-stand document), copy
+    ``inline_citation.markdown_bibliography`` verbatim — it is always
+    set and renders the DOI string itself in the visible label when a
+    DOI is registered (e.g.
     ``[(10.1179/tav.1984.1984.2.189)](https://doi.org/10.1179/…)``)
-    instead of just ``[(doi.org)](…)``. This is what scholarly readers
-    expect for cross-reference and BibTeX round-tripping. Falls back
-    to ``markdown_domain`` or ``markdown_authoryear`` when no DOI.
+    instead of just ``[(doi.org)](…)``. This is exactly what scholarly
+    readers expect for cross-reference and BibTeX round-tripping. It
+    falls back gracefully through Author-Year → Domain-Title → Domain →
+    plain text when no DOI exists. Think of it as the bibliography
+    counterpart to ``markdown_recommended``: body text gets one, the
+    reference list gets the other.
     """
 
     title: str

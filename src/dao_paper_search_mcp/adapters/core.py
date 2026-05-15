@@ -307,10 +307,12 @@ def register(mcp: FastMCP) -> None:
         a hit — do not reformat. CORE hits sourced from aggregators
         (ResearchGate, Academia.edu, Google Books) are flagged with
         ``audit.aggregator=True``; their markdown_recommended will
-        already carry a ⚠️ prefix. For bibliography or reference-list
-        entries, prefer ``inline_citation.markdown_doi`` when present —
-        the visible label is the actual DOI string, useful for
-        cross-reference and BibTeX round-tripping.
+        already carry a ⚠️ prefix. For bibliography or reference-list entries, copy
+        ``inline_citation.markdown_bibliography`` verbatim — it's
+        always set and prefers the DOI string in the visible label
+        when a DOI is registered (falls back gracefully to
+        Author-Year / Domain-Title / plain text otherwise). This is
+        the bibliography counterpart to ``markdown_recommended``.
 
         Args:
             query: free-text search query.

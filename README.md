@@ -100,15 +100,16 @@ Each `DAOPaper` carries three blocks the agent should consume directly:
 | `markdown_authoryear` | `[(Cohen 1979)](url)` — Author-Year link form for academic body text. |
 | `markdown_domain` | `[(doi.org)](url)` — domain-only form for compact footnotes. |
 | `markdown_domain_title` | `[(doi.org — Title…)](url)` — domain-plus-title for web references. |
-| `markdown_doi` | `[(10.1179/tav.1984.1984.2.189)](https://doi.org/…)` — DOI string in the visible label, for bibliography/reference-list entries. `None` when no DOI. |
+| `markdown_doi` | `[(10.1179/tav.1984.1984.2.189)](https://doi.org/…)` — DOI string in the visible label, low-level variant for fine-grained callers. `None` when no DOI. |
 | `markdown_recommended` | The agent's first-choice variant **for body text**, with `⚠️`-prefix pre-applied when `audit.warn_marker` is set. **Copy this verbatim** in prose. |
+| `markdown_bibliography` | The agent's first-choice variant **for bibliography / reference-list entries**. Always set. Prefers the DOI form (visible label is the DOI string itself) when a DOI is registered, falls back through Author-Year → Domain-Title → Domain → plain text. ⚠️-prefix pre-applied for aggregator / warn-flagged hits. **Copy this verbatim** in the references list. |
 | `fallback_text` | `"Cohen 1979: 61–79"` — used when no `primary_url` exists (print-only). |
 
 **Variant selection per context:**
 
 - **Body text** → `markdown_recommended` (defaults to Author-Year). The builder has already chosen the right shape for the source and pre-applied `⚠️` prefixes; copy verbatim.
-- **Bibliography / reference-list entries** at the end of a research-stand document → `markdown_doi` when present (renders the DOI string itself in the label, which readers expect for cross-reference and BibTeX round-tripping). Falls back to `markdown_domain` or `markdown_authoryear` when no DOI exists.
-- **Web-hit footnotes** without clean author-year context → `markdown_domain_title`.
+- **Bibliography / reference-list entries** at the end of a research-stand document → `markdown_bibliography` (always set, prefers DOI string label, graceful cascade for non-DOI sources). Copy verbatim — no field-picking required.
+- **Web-hit footnotes** without clean author-year context → `markdown_domain_title` (low-level).
 - **Print-only literature** (no `primary_url`) → `fallback_text` (bare Author-Year, no link wrapper). Do not invent a URL.
 
 **`markdown_recommended` heuristic:** Author-Year form when both authors and year are available (the academic case); Domain-Title form when no Author-Year context exists (the web-hit case); Domain-only as last resort; `fallback_text` when no link target exists. The agent is free to pick a different variant if it fits the surrounding prose better.

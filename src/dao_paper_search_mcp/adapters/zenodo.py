@@ -285,11 +285,13 @@ def register(mcp: FastMCP) -> None:
         Citation rendering: each returned ``DAOPaper`` carries an
         ``inline_citation`` block with pre-rendered Markdown. Copy
         ``inline_citation.markdown_recommended`` verbatim — do not
-        reformat to ``[(domain)](url)``. Every Zenodo record has a DOI
-        (form ``10.5281/zenodo.N``), so for bibliography or
-        reference-list entries use ``inline_citation.markdown_doi`` —
-        the visible label is the actual DOI string, useful for
-        cross-reference and BibTeX round-tripping.
+        reformat to ``[(domain)](url)``. For bibliography or
+        reference-list entries, copy
+        ``inline_citation.markdown_bibliography`` verbatim — it's
+        always set and prefers the DOI string in the visible label
+        when a DOI is registered (falls back gracefully to
+        Author-Year / Domain-Title / plain text otherwise). This is
+        the bibliography counterpart to ``markdown_recommended``.
 
         Args:
             query: free-text search.

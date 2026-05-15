@@ -6,6 +6,15 @@ text, domain-plus-title for web references, domain-only for footnotes,
 DOI-string for bibliography entries. The agent copies the chosen
 variant verbatim.
 
+Two **always-set, context-named** fields drive the typical render:
+
+- ``markdown_recommended`` → body text (Author-Year by default)
+- ``markdown_bibliography`` → bibliography entries (DOI string by
+  default; falls back through Author-Year / Domain-Title / Domain /
+  plain text)
+
+Both pre-apply the ⚠️ prefix for aggregator / warn-flagged hits.
+
 Priority of ``primary_url``:
     DOI > OpenAlex > Zenon > IAA > ADAJ > open_access_url > landing_page_url > None
 
@@ -181,11 +190,13 @@ def build_inline_citation(
 
     if primary_url is None:
         # No link target — the agent must print the Author-Year string
-        # bare; ⚠️-prefix does not attach to non-link prose.
+        # bare; ⚠️-prefix does not attach to non-link prose. Both
+        # context fields collapse to the same plain text.
         return InlineCitation(
             primary_url=None,
             display_domain=None,
             markdown_recommended=fallback_text,
+            markdown_bibliography=fallback_text,
             fallback_text=fallback_text,
         )
 
@@ -231,8 +242,26 @@ def build_inline_citation(
     else:
         markdown_recommended = markdown_domain
 
+    # Bibliography variant: prefer the DOI form so the visible label is
+    # the actual DOI string (what scholarly readers expect for
+    # cross-reference and BibTeX round-tripping). Cascade gracefully
+    # through Author-Year, Domain-Title, Domain-only when no DOI.
+    # Aggregator hits override the DOI preference because surfacing the
+    # aggregator domain is more important than the DOI in those cases.
+    if audit.aggregator:
+        markdown_bibliography = markdown_domain_title or markdown_domain
+    elif markdown_doi is not None:
+        markdown_bibliography = markdown_doi
+    elif markdown_authoryear is not None:
+        markdown_bibliography = markdown_authoryear
+    elif markdown_domain_title is not None:
+        markdown_bibliography = markdown_domain_title
+    else:
+        markdown_bibliography = markdown_domain
+
     if audit.warn_marker or audit.aggregator:
         markdown_recommended = f"⚠️{markdown_recommended}"
+        markdown_bibliography = f"⚠️{markdown_bibliography}"
 
     return InlineCitation(
         primary_url=primary_url,  # type: ignore[arg-type]
@@ -246,5 +275,6 @@ def build_inline_citation(
         markdown_domain_title=markdown_domain_title,
         markdown_doi=markdown_doi,
         markdown_recommended=markdown_recommended,
+        markdown_bibliography=markdown_bibliography,
         fallback_text=fallback_text,
     )
