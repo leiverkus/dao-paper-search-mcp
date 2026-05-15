@@ -14,6 +14,7 @@ from mcp.server.fastmcp import FastMCP
 from .adapters import adaj as _adaj
 from .adapters import crossref as _crossref
 from .adapters import iaa as _iaa
+from .adapters import openalex as _openalex
 from .adapters import zenon as _zenon
 from .resolvers import gazetteer as _gazetteer
 from .resolvers import wikidata_author as _author
@@ -43,6 +44,7 @@ _zenon.register(mcp)
 _iaa.register(mcp)
 _adaj.register(mcp)
 _crossref.register(mcp)
+_openalex.register(mcp)
 _author.register(mcp)
 _gazetteer.register(mcp)
 
