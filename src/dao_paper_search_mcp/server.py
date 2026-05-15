@@ -11,6 +11,8 @@ import sys
 
 from mcp.server.fastmcp import FastMCP
 
+from .adapters import zenon as _zenon
+
 logging.basicConfig(
     stream=sys.stderr,
     level=logging.INFO,
@@ -30,6 +32,9 @@ async def ping() -> str:
     """
     log.info("ping() called")
     return "pong"
+
+
+_zenon.register(mcp)
 
 
 def main() -> None:
