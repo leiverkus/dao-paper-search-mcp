@@ -45,7 +45,11 @@ def test_recommended_uses_authoryear_for_doi_hit() -> None:
     )
     assert ic.markdown_recommended == "[(Cohen 1979)](https://doi.org/10.2307/1356668)"
     assert ic.markdown_authoryear == "[(Cohen 1979)](https://doi.org/10.2307/1356668)"
-    assert ic.markdown_domain == "[(doi.org)](https://doi.org/10.2307/1356668)"
+    # v0.6.3: markdown_domain is hidden for DOI hits — the bare-domain
+    # variant is uninformative noise when a DOI exists (Author-Year
+    # and DOI-string variants are more useful and already exposed).
+    assert ic.markdown_domain is None
+    assert ic.display_label_domain is None
     # DOI variant — visible label is the DOI string itself (for
     # bibliography entries where readers want to read/copy the DOI).
     assert ic.markdown_doi == "[(10.2307/1356668)](https://doi.org/10.2307/1356668)"
@@ -56,7 +60,6 @@ def test_recommended_uses_authoryear_for_doi_hit() -> None:
         "(https://doi.org/10.2307/1356668)"
     )
     assert ic.display_label_authoryear == "Cohen 1979"
-    assert ic.display_label_domain == "doi.org"
 
 
 def test_recommended_falls_back_to_domain_title_without_year() -> None:
@@ -250,6 +253,45 @@ def test_anonymous_skips_authoryear_variant() -> None:
         "[(example.org — Anonymous note)](https://example.org/x)"
     )
     assert ic.fallback_text == "Anon. 2024"
+
+
+def test_markdown_domain_hidden_for_doi_hits_visible_otherwise() -> None:
+    """v0.6.3: removed the bare-domain variant from public exposure
+    when a DOI is registered. With DOI the agent has the Author-Year
+    and DOI-string variants — ``[(doi.org)]`` is uninformative noise
+    and was being reflexively preferred by the agent. For non-DOI
+    hits (Zenon, IAA pre-DataCite, etc.) the domain form remains
+    legitimate and visible."""
+    # DOI hit: markdown_domain hidden.
+    doi_hit = build_inline_citation(
+        authors=["Cohen, R."],
+        year=1979,
+        pages=None,
+        title="t",
+        identifiers=Identifiers(doi="10.2307/1356668"),
+        landing_page_url=None,
+        open_access_url=None,
+        audit=_audit(),
+    )
+    assert doi_hit.markdown_domain is None
+    assert doi_hit.display_label_domain is None
+    # Author-Year and DOI-string variants still exposed.
+    assert doi_hit.markdown_authoryear is not None
+    assert doi_hit.markdown_doi is not None
+
+    # Non-DOI hit: markdown_domain stays exposed.
+    zenon_only = build_inline_citation(
+        authors=["Cohen, R."],
+        year=1979,
+        pages=None,
+        title="t",
+        identifiers=Identifiers(zenon_id="123"),
+        landing_page_url=None,
+        open_access_url=None,
+        audit=_audit(),
+    )
+    assert zenon_only.markdown_domain == "[(zenon.dainst.org)](https://zenon.dainst.org/Record/123)"
+    assert zenon_only.display_label_domain == "zenon.dainst.org"
 
 
 def test_markdown_bibliography_prefers_doi_form_when_doi_present() -> None:

@@ -114,20 +114,32 @@ class InlineCitation(BaseModel):
     prose:
 
     - **Body text:** ``markdown_recommended`` (defaults to Author-Year
-      form). Author-Year is empirically what the agent renders when
-      URLs and metadata flow together (Qwen 3.6 Plus test, 2026-05-15).
+      form). For DOI hits this is ``[(Cohen 1979)](doi.org/…)``.
     - **Bibliography / reference-list entries:** ``markdown_bibliography``
-      (always set). Prefers the DOI form when a DOI is present, so
-      the visible label is the actual DOI string — exactly what
-      scholarly readers want for cross-reference and BibTeX
-      round-tripping. Falls back gracefully through Author-Year,
-      Domain-Title, Domain-only, then plain text when no link target.
-    - **Web references / domain-anchored citations:** the low-level
-      ``markdown_domain_title`` or ``markdown_domain`` fields when a
-      fine-grained choice is needed.
+      (always set). For DOI hits this is the DOI string in the visible
+      label: ``[(10.1179/tav.1984.1984.2.189)](doi.org/…)``. Falls back
+      gracefully through Author-Year, Domain-Title, Domain-only, then
+      plain text when no link target exists.
+    - **Web references / domain-anchored citations** (non-DOI hits
+      only): the low-level ``markdown_domain_title`` or
+      ``markdown_domain`` fields when fine-grained choice is needed.
     - **Aggregator / warn-flagged hits:** both ``markdown_recommended``
       and ``markdown_bibliography`` already carry the ⚠️ prefix; no
       manual re-application needed.
+
+    Note (v0.6.3): when a DOI is registered, ``markdown_domain`` and
+    ``display_label_domain`` are ``None``. The bare-domain variant
+    ``[(doi.org)]`` is uninformative noise when a DOI exists — it tells
+    the reader nothing about *which* DOI. The Author-Year and
+    DOI-string variants are exposed instead, both useful in any
+    rendering context. Three converging daily-driver runs (v0.6.0,
+    v0.6.1, v0.6.2) showed the agent reflexively picking
+    ``markdown_domain`` for both body text and bibliography despite
+    docstring guidance and context-named pflichtfelds; removing the
+    noise variant for DOI hits is the structural fix. For non-DOI
+    sources (Zenon, IAA pre-DataCite, etc.) the domain form remains
+    exposed because ``[(zenon.dainst.org)]`` is a legitimate
+    identifier hint there.
     """
 
     primary_url: Optional[HttpUrl] = None

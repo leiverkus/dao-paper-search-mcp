@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-05-15
+
+Hide the bare-domain variant from public exposure when a DOI is
+registered. Three converging daily-driver runs (v0.6.0, v0.6.1,
+v0.6.2) showed the agent reflexively picking ``markdown_domain``
+(``[(doi.org)](url)``) for both body-text and bibliography
+rendering — ignoring the docstring guidance pointing at
+``markdown_recommended`` (Author-Year form) and the context-named
+pflichtfeld ``markdown_bibliography`` (DOI-string form).
+
+When a DOI exists, the bare-domain label is structurally useless —
+it tells the reader nothing about *which* DOI. The Author-Year and
+DOI-string variants are both already exposed and both more
+informative. Removing the noise variant for DOI hits forces the
+agent into the useful subset.
+
+### Changed
+- ``InlineCitation.markdown_domain`` and
+  ``InlineCitation.display_label_domain`` are now ``None`` when
+  ``identifiers.doi`` is set. For non-DOI sources (Zenon, IAA records
+  pre-DataCite, ADAJ chapters, etc.) these fields keep their previous
+  behaviour — ``[(zenon.dainst.org)]`` etc. remain legitimate
+  source-hint labels.
+- The cascade fallbacks inside ``markdown_recommended`` and
+  ``markdown_bibliography`` still use the full domain form internally;
+  only the public field is hidden.
+- ``DAOPaper`` model docstring explains the new constraint and its
+  rationale (three converging runs of reflexive-domain-preference
+  by the agent).
+
+### Tests
+- 1 updated test (the previous ``markdown_domain`` assertion for a
+  DOI hit now asserts ``None``).
+- 1 new test ``test_markdown_domain_hidden_for_doi_hits_visible_otherwise``
+  pinning the new behaviour and verifying non-DOI hits are unaffected.
+- 256 unit tests passing, 3 xfailed.
+
+### Non-breaking
+``markdown_domain`` was always ``Optional[str]`` in the schema, so
+existing consumers that read it ``is not None`` already handled the
+None case. Callers that relied on a domain-form for DOI hits should
+switch to ``markdown_doi`` (DOI-string label) or ``markdown_recommended``
+(Author-Year label) — both produce more informative output.
+
 ## [0.6.2] - 2026-05-15
 
 Structural fix for the bibliography-rendering issue. v0.6.0 added the
@@ -321,7 +365,8 @@ most relevant to DAO/Digital-Humanities research.
   upstream SSR is restored or a playwright fallback is added post-MVP.
   See README "Known limitations".
 
-[Unreleased]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.6.3...HEAD
+[0.6.3]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.6.3
 [0.6.2]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.6.2
 [0.6.1]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.6.1
 [0.6.0]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.6.0

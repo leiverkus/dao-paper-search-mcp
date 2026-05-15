@@ -209,7 +209,14 @@ def build_inline_citation(
     markdown_authoryear = (
         f"[({ay_label})]({primary_url})" if ay_label else None
     )
-    markdown_domain = f"[({domain})]({primary_url})"
+    # Internal full form — used inside the cascade as a last-resort
+    # fallback. Public exposure of ``markdown_domain`` is restricted
+    # below: when a DOI is registered, ``[(doi.org)]`` is uninformative
+    # noise (the more useful Author-Year and DOI-string variants are
+    # already exposed) and empirical agent runs show models prefer this
+    # field over the context-named pflichtfelds, defeating their
+    # purpose. So we hide it for DOI hits.
+    _markdown_domain_full = f"[({domain})]({primary_url})"
     markdown_domain_title = (
         f"[({domain} — {trunc_title})]({primary_url})" if trunc_title else None
     )
@@ -234,13 +241,13 @@ def build_inline_citation(
     # body-text form; web hits without author-year fall back to
     # Domain-Title; domain-only is the last resort.
     if audit.aggregator:
-        markdown_recommended = markdown_domain_title or markdown_domain
+        markdown_recommended = markdown_domain_title or _markdown_domain_full
     elif markdown_authoryear is not None:
         markdown_recommended = markdown_authoryear
     elif markdown_domain_title is not None:
         markdown_recommended = markdown_domain_title
     else:
-        markdown_recommended = markdown_domain
+        markdown_recommended = _markdown_domain_full
 
     # Bibliography variant: prefer the DOI form so the visible label is
     # the actual DOI string (what scholarly readers expect for
@@ -249,7 +256,7 @@ def build_inline_citation(
     # Aggregator hits override the DOI preference because surfacing the
     # aggregator domain is more important than the DOI in those cases.
     if audit.aggregator:
-        markdown_bibliography = markdown_domain_title or markdown_domain
+        markdown_bibliography = markdown_domain_title or _markdown_domain_full
     elif markdown_doi is not None:
         markdown_bibliography = markdown_doi
     elif markdown_authoryear is not None:
@@ -257,21 +264,38 @@ def build_inline_citation(
     elif markdown_domain_title is not None:
         markdown_bibliography = markdown_domain_title
     else:
-        markdown_bibliography = markdown_domain
+        markdown_bibliography = _markdown_domain_full
 
     if audit.warn_marker or audit.aggregator:
         markdown_recommended = f"⚠️{markdown_recommended}"
         markdown_bibliography = f"⚠️{markdown_bibliography}"
 
+    # Hide the bare-domain variants when a DOI is registered. Three
+    # converging daily-driver runs (v0.6.0, v0.6.1, v0.6.2) showed the
+    # agent reflexively picking ``markdown_domain`` for both body text
+    # and bibliography even when more informative variants existed
+    # alongside docstring guidance pointing elsewhere. With DOI present,
+    # ``[(doi.org)]`` is uninformative noise — Author-Year (body) and
+    # DOI-string (bibliography) are both more useful and both already
+    # exposed. So we remove the noise. Hits without a DOI keep the
+    # domain variant because ``[(zenon.dainst.org)]`` etc. are
+    # legitimate identifiers for those sources.
+    public_markdown_domain = (
+        None if identifiers.doi else _markdown_domain_full
+    )
+    public_display_label_domain = (
+        None if identifiers.doi else display_label_domain
+    )
+
     return InlineCitation(
         primary_url=primary_url,  # type: ignore[arg-type]
         display_domain=domain,
         display_label_authoryear=display_label_authoryear,
-        display_label_domain=display_label_domain,
+        display_label_domain=public_display_label_domain,
         display_label_domain_title=display_label_domain_title,
         display_label_doi=display_label_doi,
         markdown_authoryear=markdown_authoryear,
-        markdown_domain=markdown_domain,
+        markdown_domain=public_markdown_domain,
         markdown_domain_title=markdown_domain_title,
         markdown_doi=markdown_doi,
         markdown_recommended=markdown_recommended,

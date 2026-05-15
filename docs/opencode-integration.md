@@ -15,7 +15,7 @@ Add the following entry to the `mcp` block, alongside the existing
   "type": "local",
   "command": [
     "/opt/homebrew/bin/uvx",
-    "--from", "git+https://github.com/leiverkus/dao-paper-search-mcp@v0.6.2",
+    "--from", "git+https://github.com/leiverkus/dao-paper-search-mcp@v0.6.3",
     "python", "-m", "dao_paper_search_mcp.server"
   ],
   "enabled": true,
