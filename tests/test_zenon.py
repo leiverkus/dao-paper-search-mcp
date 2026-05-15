@@ -137,6 +137,9 @@ async def test_search_zenon_impl_happy_path() -> None:
     assert p.language == "en"
     assert p.authors == ["Beit-Arieh, Itzhaq", "Beck, Pirhiya"]
     assert str(p.landing_page_url) == "https://zenon.dainst.org/Record/001388596"
+    # Briefing Iteration 2 / gazetteer integration: DAILinks.gazetteer
+    # is automatically promoted into site_ids as ``gazetteer:<gazId>``.
+    assert "gazetteer:2043520" in p.site_ids
 
 
 @pytest.mark.asyncio

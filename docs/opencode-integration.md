@@ -32,7 +32,7 @@ opencode mcp list
 
 You should see `dao-paper-search [connected]` and the following tools
 listed: `ping`, `search_zenon`, `search_iaa`, `search_adaj`,
-`resolve_author`.
+`resolve_author`, `resolve_site`.
 
 ## 2. `~/.config/opencode/agent/research.md`
 
@@ -46,8 +46,10 @@ In the `## Werkzeuge & wann du sie nutzt` section, replace the existing
     - Levante-Archäologie (Iron Age, Bronze Age, biblische Archäologie)
     - Deutsch-/Hebräisch-/Arabisch-sprachige Forschung
     - IAA-, DoA-Jordan-, und DAI-Grabungsberichten
-    - Author-Verifikation bei mehrdeutigen Namen (Cohen, Mazar, Rosen)
-  Output enthält `verification_note` bei unsicheren Treffern.
+    - Author-Verifikation bei mehrdeutigen Namen (Cohen, Mazar, Rosen) → `resolve_author`
+    - Site-Disambiguation und stabile Anker-IDs via iDAI.gazetteer → `resolve_site`
+  Output enthält `verification_note` bei unsicheren Treffern. Zenon-Treffer haben
+  `site_ids` mit `gazetteer:<gazId>`-Tokens, sobald DAI die Site cross-linkt.
   `search_iaa` ist aktuell **MVP-incomplete** (IAA-Backend ist JS-only) —
   bei `IAAUnavailableError` über `search_zenon` quer-checken.
 ```

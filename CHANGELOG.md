@@ -8,6 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `resolve_site` MCP tool against `iDAI.gazetteer`
+  (`gazetteer.dainst.org`). Returns canonical name, gazId, multilingual
+  name variants, types, coordinates, parent/ancestor hierarchy, and
+  Pleiades + GeoNames cross-refs.
+- Zenon search results now auto-populate `DAOPaper.site_ids` from the
+  upstream `DAILinks.gazetteer` cross-links. Each link becomes a
+  `gazetteer:<gazId>` token in the same record, so agents get
+  authoritative place anchoring with zero extra calls.
+- `ResolvedSite` Pydantic model for the new resolver output.
+
+### Note (Tier-2 bibliography portals)
+- Investigated Propylaeum (BSB Munich) and IxTheo (Tübingen): both
+  serve bot-protection JS challenges. Persée and OpenEdition both
+  ship React frontends with no SSR results. Tier-2 bibliography
+  coverage therefore requires Playwright (post-MVP) or stays
+  uncovered. We pivoted to the gazetteer integration instead — same
+  Iteration-2 scope, but with a clean JSON API and direct synergy
+  with Zenon's existing DAILinks.
+
+### Added (earlier in this changelog block)
 - Acceptance test suite (`tests/test_verification_suite.py`) with the
   five frozen reference fingerprints from the briefing (Abschnitt VII).
   The non-negotiable contract — the Ben-Ami 2026 Levant 58(1)

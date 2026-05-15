@@ -33,6 +33,7 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 
 from ..models import DAOPaper, PublicationStatus
+from ..resolvers.gazetteer import site_id_tokens_from_zenon_record
 
 log = logging.getLogger(__name__)
 
@@ -157,6 +158,7 @@ def _record_to_paper(record: Mapping[str, Any]) -> DAOPaper:
         landing_page_url=_build_landing_url(record),  # type: ignore[arg-type]
         language=_detect_language(record),
         publication_status=PublicationStatus.PUBLISHED,
+        site_ids=site_id_tokens_from_zenon_record(record),
     )
 
 

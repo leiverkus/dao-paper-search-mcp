@@ -24,6 +24,29 @@ class PublicationStatus(str, Enum):
     UNKNOWN = "unknown"
 
 
+class ResolvedSite(BaseModel):
+    """A disambiguated archaeological place, resolved via iDAI.gazetteer.
+
+    ``gaz_id`` is the stable iDAI identifier. ``pleiades_id`` and
+    ``geonames_id`` are surfaced from the gazetteer's ``identifiers``
+    block so consumers can cross-link to those other authoritative
+    sources without a second lookup.
+    """
+
+    gaz_id: str
+    name_preferred: str
+    name_language: Optional[str] = None
+    name_variants: List[str] = Field(default_factory=list)
+    types: List[str] = Field(default_factory=list)
+    coordinates: Optional[tuple[float, float]] = None
+    parent_gaz_id: Optional[str] = None
+    ancestor_gaz_ids: List[str] = Field(default_factory=list)
+    pleiades_id: Optional[str] = None
+    geonames_id: Optional[str] = None
+    landing_page_url: Optional[HttpUrl] = None
+    verification_note: Optional[str] = None
+
+
 class ResolvedAuthor(BaseModel):
     """A disambiguated author identity, produced by ``resolve_author``.
 

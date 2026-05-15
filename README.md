@@ -14,6 +14,7 @@ Vertical MCP server for the **DAO** domain (Digital Antiquity Oldenburg) — Lev
 | `search_iaa` | IAA Publications (Reports, ʿAtiqot, HA-ESI) | MVP-incomplete (see below) |
 | `search_adaj` | DoA Publication Archive (ADAJ, SHAJ, Munjazat, JERD, Athar) | implemented |
 | `resolve_author` | Wikidata SPARQL + local override list + GND fallback | implemented |
+| `resolve_site` | iDAI.gazetteer (DAI's authoritative place register) | implemented |
 
 ### Tier 2 (planned)
 
