@@ -270,33 +270,39 @@ def build_inline_citation(
         markdown_recommended = f"⚠️{markdown_recommended}"
         markdown_bibliography = f"⚠️{markdown_bibliography}"
 
-    # Hide the bare-domain variants when a DOI is registered. Three
-    # converging daily-driver runs (v0.6.0, v0.6.1, v0.6.2) showed the
-    # agent reflexively picking ``markdown_domain`` for both body text
-    # and bibliography even when more informative variants existed
-    # alongside docstring guidance pointing elsewhere. With DOI present,
-    # ``[(doi.org)]`` is uninformative noise — Author-Year (body) and
-    # DOI-string (bibliography) are both more useful and both already
-    # exposed. So we remove the noise. Hits without a DOI keep the
-    # domain variant because ``[(zenon.dainst.org)]`` etc. are
-    # legitimate identifiers for those sources.
-    public_markdown_domain = (
-        None if identifiers.doi else _markdown_domain_full
-    )
-    public_display_label_domain = (
-        None if identifiers.doi else display_label_domain
-    )
+    # When a DOI is registered, hide *all* domain-revealing fields from
+    # public exposure. v0.6.3 hid markdown_domain and display_label_domain
+    # but the agent kept rendering ``[(doi.org)](url)`` in bibliography
+    # entries — apparently constructing the label from the still-exposed
+    # ``display_domain`` ("doi.org") and ``markdown_domain_title``
+    # ("[(doi.org — Title)](url)") fields. v0.6.4 removes those too.
+    # After this: for DOI hits the only domain-style information left
+    # is parseable from ``primary_url`` itself, which is harder for the
+    # agent to reach reflexively. The exposed alternatives all carry
+    # useful information (Author-Year, DOI-string).
+    if identifiers.doi:
+        public_display_domain: Optional[str] = None
+        public_display_label_domain = None
+        public_display_label_domain_title = None
+        public_markdown_domain = None
+        public_markdown_domain_title = None
+    else:
+        public_display_domain = domain
+        public_display_label_domain = display_label_domain
+        public_display_label_domain_title = display_label_domain_title
+        public_markdown_domain = _markdown_domain_full
+        public_markdown_domain_title = markdown_domain_title
 
     return InlineCitation(
         primary_url=primary_url,  # type: ignore[arg-type]
-        display_domain=domain,
+        display_domain=public_display_domain,
         display_label_authoryear=display_label_authoryear,
         display_label_domain=public_display_label_domain,
-        display_label_domain_title=display_label_domain_title,
+        display_label_domain_title=public_display_label_domain_title,
         display_label_doi=display_label_doi,
         markdown_authoryear=markdown_authoryear,
         markdown_domain=public_markdown_domain,
-        markdown_domain_title=markdown_domain_title,
+        markdown_domain_title=public_markdown_domain_title,
         markdown_doi=markdown_doi,
         markdown_recommended=markdown_recommended,
         markdown_bibliography=markdown_bibliography,

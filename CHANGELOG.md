@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-05-15
+
+Total domain-field blackout for DOI hits. v0.6.3 hid
+`markdown_domain` and `display_label_domain` when a DOI was
+registered. The agent in the next daily-driver run fixed body-text
+rendering (now correctly Author-Year form) but **still rendered
+`[(doi.org)](url)` in every bibliography entry**. The agent was
+constructing the label from the remaining domain-revealing fields:
+`display_domain` (value `"doi.org"`) and `markdown_domain_title`
+(label `"(doi.org — Title)"`).
+
+v0.6.4 hides those too. For DOI-bearing hits the only
+domain-revealing trace left is parseable from `primary_url` itself,
+which is harder for the agent to reach reflexively when constructing
+a templated bibliography entry from individual fields.
+
+### Changed
+- `InlineCitation.display_domain`, `markdown_domain_title`, and
+  `display_label_domain_title` are now `None` when
+  `identifiers.doi` is set. These joined `markdown_domain` and
+  `display_label_domain` (already hidden since v0.6.3) in the
+  DOI-hit blackout.
+- For non-DOI sources (Zenon, IAA pre-DataCite, ADAJ chapters,
+  OpenAlex records without DOI, etc.) all these fields keep their
+  previous behaviour. `[(zenon.dainst.org)]` and friends remain
+  legitimate source-hint labels.
+
+### Tests
+- 2 updated tests reflecting the v0.6.4 blackout assertions.
+- 256 unit tests passing, 3 xfailed.
+
+### Why this iteration
+Four converging daily-driver runs (v0.6.0, v0.6.1, v0.6.2, v0.6.3)
+proved that the agent has a strong prior for rendering
+`[(doi.org)](url)` in bibliography entries — it will construct this
+label from any domain-revealing field we expose. The final
+schema-side intervention is total field removal.
+
+If v0.6.4 *still* doesn't suppress the rendering, the agent is
+parsing `primary_url` directly to extract the domain, and
+schema-side levers are exhausted. The fallback would be prompt-side
+reinforcement via `~/.config/opencode/agent/research.md` — see
+`docs/2026-05-15-research-md-snippet.md` for the prepared snippet.
+
 ## [0.6.3] - 2026-05-15
 
 Hide the bare-domain variant from public exposure when a DOI is
@@ -365,7 +409,8 @@ most relevant to DAO/Digital-Humanities research.
   upstream SSR is restored or a playwright fallback is added post-MVP.
   See README "Known limitations".
 
-[Unreleased]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.6.3...HEAD
+[Unreleased]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.6.4...HEAD
+[0.6.4]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.6.4
 [0.6.3]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.6.3
 [0.6.2]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.6.2
 [0.6.1]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.6.1

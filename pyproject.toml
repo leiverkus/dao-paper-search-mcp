@@ -1,6 +1,6 @@
 [project]
 name = "dao-paper-search-mcp"
-version = "0.6.3"
+version = "0.6.4"
 description = "MCP server for DAO-centred research: Zenon DAI, IAA Publications, ADAJ, plus a curated cross-platform paper-search surface (Crossref, OpenAlex, Semantic Scholar, arXiv, CORE, Zenodo, bioRxiv) — every hit pre-renders an inline_citation block for verbatim agent copy."
 readme = "README.md"
 license = { text = "MIT" }

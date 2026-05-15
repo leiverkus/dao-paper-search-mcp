@@ -28,7 +28,9 @@ def test_doi_wins_over_landing_url() -> None:
         audit=_audit(),
     )
     assert str(ic.primary_url) == "https://doi.org/10.2307/1356668"
-    assert ic.display_domain == "doi.org"
+    # v0.6.4: display_domain hidden for DOI hits — agent was using it
+    # to reconstruct ``[(doi.org)](url)`` for bibliography entries.
+    assert ic.display_domain is None
     assert ic.fallback_text == "Cohen 1979: 61–79"
 
 
@@ -45,20 +47,17 @@ def test_recommended_uses_authoryear_for_doi_hit() -> None:
     )
     assert ic.markdown_recommended == "[(Cohen 1979)](https://doi.org/10.2307/1356668)"
     assert ic.markdown_authoryear == "[(Cohen 1979)](https://doi.org/10.2307/1356668)"
-    # v0.6.3: markdown_domain is hidden for DOI hits — the bare-domain
-    # variant is uninformative noise when a DOI exists (Author-Year
-    # and DOI-string variants are more useful and already exposed).
+    # v0.6.3+v0.6.4: all domain-revealing fields hidden for DOI hits
+    # so the agent can't reconstruct ``[(doi.org)]`` from any of them.
     assert ic.markdown_domain is None
     assert ic.display_label_domain is None
+    assert ic.display_domain is None
+    assert ic.markdown_domain_title is None
+    assert ic.display_label_domain_title is None
     # DOI variant — visible label is the DOI string itself (for
     # bibliography entries where readers want to read/copy the DOI).
     assert ic.markdown_doi == "[(10.2307/1356668)](https://doi.org/10.2307/1356668)"
     assert ic.display_label_doi == "10.2307/1356668"
-    # Title short enough to fit unchanged.
-    assert ic.markdown_domain_title == (
-        "[(doi.org — The Iron Age Fortresses in the Central Negev)]"
-        "(https://doi.org/10.2307/1356668)"
-    )
     assert ic.display_label_authoryear == "Cohen 1979"
 
 
