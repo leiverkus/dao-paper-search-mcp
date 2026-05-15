@@ -17,13 +17,20 @@ embedded in ``dc:identifier`` as ``info:doi/...``.
 
 So this adapter:
 
-1. Calls ``verb=ListRecords&metadataPrefix=oai_dc`` with optional
-   ``set=`` (collection filter) and ``from=``/``until=`` (year range).
-2. Paginates via ``resumptionToken`` (max 20 pages = ~2k records per
-   query as a safety cap).
+1. Calls ``verb=ListRecords&metadataPrefix=oai_dc`` with required
+   ``set=`` (collection filter) and optional ``from=``/``until=``
+   (year range). The set filter is required in practice because the
+   no-set path on the IAA OAI server takes 30+ s per page, exceeding
+   typical MCP tool-call timeouts. We default to ``publication:atiqot``
+   when no collection is provided; ``collection="all"`` opts in to the
+   slow whole-archive scan.
+2. Paginates via ``resumptionToken``, capped by both a page count
+   (3 pages = ~300 records) and a 40 s wall-clock budget. When the
+   budget is exhausted we return whatever matches we have so far,
+   with a warning logged — partial results beat timeout errors.
 3. Parses Dublin Core XML into ``DAOPaper``.
 4. Filters client-side: every query token must appear in title +
-   description + subject. AND-of-tokens, case-insensitive.
+   description + subject + authors. AND-of-tokens, case-insensitive.
 5. Returns up to ``max_results`` matches.
 
 No more ``IAAUnavailableError``; the MVP-incomplete asterisk is gone.
@@ -38,6 +45,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 import xml.etree.ElementTree as ET
 from typing import Optional
 
@@ -50,19 +58,37 @@ from ..models import Audit, DAOPaper, Identifiers, PublicationStatus
 log = logging.getLogger(__name__)
 
 IAA_OAI = "https://publications.iaa.org.il/do/oai/"
+
+# Per-request timeout. Atiqot+year-filter queries empirically take
+# 17-25 s on the live OAI server (probed 2026-05-15), so the per-call
+# ceiling has to sit above that. 30 s is the same as before v0.6.1 —
+# the v0.6.1 fix is the wall-clock budget below, not a tighter timeout.
 HTTP_TIMEOUT = 30.0
 
 _USER_AGENT = (
-    "dao-paper-search-mcp/0.1 "
+    "dao-paper-search-mcp/0.6 "
     "(+https://github.com/leiverkus/dao-paper-search-mcp; "
     "mailto:patrick.leiverkus@uni-oldenburg.de)"
 )
 
-# Safety cap on pagination: 20 pages × 100 records = ~2000 records per
-# query. A keyword filter typically narrows that to <50 hits. If a user
-# hits the cap with no matches, the docstring tells them to narrow the
-# year range.
-_MAX_PAGES = 20
+# Pagination safety cap. With each page costing 5-25 s on the live OAI
+# server, three pages caps the worst-case at ~75 s in absolute terms —
+# but the wall-clock budget below kicks in much earlier.
+_MAX_PAGES = 3
+
+# Overall budget per call. When elapsed time crosses this line we stop
+# paginating and return whatever matches we have, with a warning
+# logged. Sized to stay inside typical 60 s MCP-tool-call timeouts
+# while still allowing one full slow page round-trip (~25 s) plus
+# headroom for a second page or parsing.
+_BUDGET_SECONDS = 40.0
+
+# Default set when callers don't specify a collection. Atiqot is IAA's
+# primary peer-reviewed journal and the OAI server returns its first
+# page in ~5-8 s — the no-set ListRecords path is ~30+ s per page and
+# unusable inside MCP timeouts. To search the entire archive, pass
+# ``collection="all"``.
+_DEFAULT_COLLECTION = "atiqot"
 
 # Friendly collection names → OAI setSpec. Pass-through is also
 # accepted for sets we haven't catalogued here yet.
@@ -88,15 +114,26 @@ _NS = {
 def _resolve_set_spec(collection: Optional[str]) -> Optional[str]:
     """Translate a user-facing collection name to an OAI setSpec.
 
-    ``None`` means "no set filter — query all collections". Friendly
-    names from ``_COLLECTIONS`` are mapped; any other string is passed
-    through, with ``publication:`` prepended if missing — so callers
-    can use either ``"atiqot"`` or ``"publication:atiqot"``.
+    Default behaviour (``collection=None``) maps to Atiqot — the IAA's
+    primary peer-reviewed journal — because the no-set ListRecords
+    path takes 30+ s per page on the live OAI server, which doesn't
+    fit inside MCP tool-call timeouts. To explicitly query the entire
+    archive (slow but possible), pass ``collection="all"``.
+
+    Friendly names from ``_COLLECTIONS`` are mapped; any other string
+    is passed through, with ``publication:`` prepended if missing — so
+    callers can use either ``"atiqot"`` or ``"publication:atiqot"``.
     """
     if collection is None:
-        return None
+        # Default safety net — avoid the slow no-filter path.
+        return _COLLECTIONS[_DEFAULT_COLLECTION]
     s = collection.strip()
     if not s:
+        return _COLLECTIONS[_DEFAULT_COLLECTION]
+    if s == "all":
+        # Explicit opt-in to the slow whole-archive scan. The caller
+        # is responsible for narrowing via year_from/year_to to keep
+        # the request inside the wall-clock budget.
         return None
     if s in _COLLECTIONS:
         return _COLLECTIONS[s]
@@ -374,7 +411,14 @@ async def search_iaa_impl(
     async def _run(c: httpx.AsyncClient) -> list[DAOPaper]:
         matches: list[DAOPaper] = []
         params: list[tuple[str, str]] = _build_initial_params(set_spec, year_from, year_to)
+        deadline = time.monotonic() + _BUDGET_SECONDS
         for page in range(_MAX_PAGES):
+            if time.monotonic() > deadline:
+                log.warning(
+                    "iaa.search budget %ss exceeded after %d pages; returning %d partial matches",
+                    _BUDGET_SECONDS, page, len(matches),
+                )
+                break
             r = await c.get(IAA_OAI, params=params, headers=headers, timeout=HTTP_TIMEOUT)
             r.raise_for_status()
             page_matches, token = _parse_page(r.text, tokens)
@@ -416,10 +460,17 @@ def register(mcp: FastMCP) -> None:
         Backend: OAI-PMH (``/do/oai/``). Server-side filtering by
         collection and year range; client-side AND-of-tokens keyword
         matching against title + description + subject + authors. The
-        underlying Solr full-text search is not exposed publicly, so
-        very wide queries without ``year_from``/``year_to`` may need
-        multiple pagination round-trips before finding matches.
-        Recommendation: always pass at least a 5-year window.
+        underlying Solr full-text search is not exposed publicly.
+
+        Performance note: the OAI server is slow when no set filter is
+        applied (~30 s per page of 100 records). The adapter therefore
+        defaults to ``collection="atiqot"`` (the IAA's primary journal,
+        ~5-25 s per page depending on year range) when no collection
+        is specified. To search the entire archive, pass
+        ``collection="all"`` explicitly — and always combine with a
+        ``year_from``/``year_to`` window. A 40 s wall-clock budget
+        applies: when exhausted, partial matches are returned with a
+        warning logged (better than a timeout error).
 
         Citation rendering: every record carries an ``inline_citation``
         block with pre-rendered Markdown. Copy
@@ -437,11 +488,14 @@ def register(mcp: FastMCP) -> None:
                 handful of keywords; complex Lucene operators are not
                 supported here.
             max_results: 1-50.
-            collection: optional collection filter — friendly name
-                (``"atiqot"`` | ``"ha-esi"`` | ``"ha-hebrew"`` |
+            collection: collection filter. Defaults to ``"atiqot"``
+                for performance reasons (see Performance note above).
+                Other friendly names: ``"ha-esi"`` | ``"ha-hebrew"`` |
                 ``"esi-english"`` | ``"iaa-books"`` | ``"favissa"`` |
-                ``"cornerstone"`` | ``"ha-esi-bilingual"``) or a raw
-                OAI setSpec (``"publication:xxx"``).
+                ``"cornerstone"`` | ``"ha-esi-bilingual"``. Pass
+                ``"all"`` for whole-archive scans (slow; pair with
+                year filter). Raw OAI setSpec (``"publication:xxx"``)
+                also accepted.
             year_from: lower bound publication year, inclusive.
             year_to: upper bound publication year, inclusive.
         """

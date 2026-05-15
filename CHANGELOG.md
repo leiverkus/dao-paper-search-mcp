@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-05-15
+
+Fixes a regression observed in the first v0.6.0 daily-driver run: the
+`search_iaa` tool timed out at the MCP layer (error -32001) when
+called without a `collection` filter. Root cause: the IAA OAI server
+takes 30+ seconds per page when no `set=` filter is applied, exceeding
+the 30 s per-request HTTP timeout. Probed: `ListRecords` with no
+filter returns first 100 records in 34.5 s; with `set=publication:atiqot`
+in 7.6 s; with set + 2-year window in 4.6 s.
+
+### Fixed
+- `search_iaa(collection=None)` now defaults to `collection="atiqot"`
+  rather than the slow no-set path. To explicitly search the entire
+  IAA archive (slow), pass `collection="all"` and always combine with
+  a `year_from`/`year_to` window.
+- Added a 40 s wall-clock budget to the pagination loop. When
+  exhausted, returns whatever matches have accumulated with a
+  warning logged — partial results beat timeout errors. Reduced
+  page cap from 5 to 3 (matches the budget envelope).
+- Tool docstring spells out the performance characteristics: typical
+  page latency ranges, budget behaviour, when to use `collection="all"`.
+
+### Tests
+- 4 new unit tests in `tests/test_iaa.py` covering the new default
+  (`collection=None` → atiqot) and the `collection="all"` escape
+  hatch. 251 unit tests passing, 3 xfailed.
+
 ## [0.6.0] - 2026-05-15
 
 Bibliography-friendly DOI rendering. Observed live: at the end of a
@@ -255,7 +282,8 @@ most relevant to DAO/Digital-Humanities research.
   upstream SSR is restored or a playwright fallback is added post-MVP.
   See README "Known limitations".
 
-[Unreleased]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.6.1
 [0.6.0]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.6.0
 [0.5.0]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.5.0
 [0.4.0]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.4.0

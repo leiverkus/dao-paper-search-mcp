@@ -225,8 +225,18 @@ def test_resolve_set_spec_friendly_names_and_passthrough() -> None:
     # Unknown friendly name gets ``publication:`` prepended (escape hatch
     # for sets we haven't catalogued).
     assert _resolve_set_spec("brand_new_set") == "publication:brand_new_set"
-    assert _resolve_set_spec(None) is None
-    assert _resolve_set_spec("") is None
+
+
+def test_resolve_set_spec_none_defaults_to_atiqot() -> None:
+    """v0.6.1: default-to-atiqot when no collection given, because the
+    no-set OAI path is unusably slow (~30s/page) for MCP timeouts."""
+    assert _resolve_set_spec(None) == "publication:atiqot"
+    assert _resolve_set_spec("") == "publication:atiqot"
+
+
+def test_resolve_set_spec_all_keyword_means_no_filter() -> None:
+    """v0.6.1: explicit opt-in to the whole-archive scan."""
+    assert _resolve_set_spec("all") is None
 
 
 def test_parse_page_extracts_matching_records() -> None:
@@ -370,6 +380,35 @@ async def test_search_iaa_impl_stops_when_max_results_reached() -> None:
     assert len(results) == 1
     # Only one round-trip: max_results reached on the first page.
     assert call_count["n"] == 1
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_search_iaa_impl_defaults_to_atiqot_set() -> None:
+    """v0.6.1: ensure the URL sent to OAI carries ``set=publication:atiqot``
+    when the caller doesn't specify a collection — the no-set path is
+    too slow for MCP timeouts."""
+    route = respx.get(IAA_OAI).mock(
+        return_value=httpx.Response(200, text=EMPTY_LISTRECORDS)
+    )
+    await search_iaa_impl("anything", max_results=5)
+    assert route.called
+    sent_url = str(route.calls.last.request.url)
+    assert "set=publication%3Aatiqot" in sent_url or "set=publication:atiqot" in sent_url
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_search_iaa_impl_all_keyword_drops_set_filter() -> None:
+    """v0.6.1: collection="all" opts in to the slow whole-archive scan
+    by omitting the ``set=`` parameter entirely."""
+    route = respx.get(IAA_OAI).mock(
+        return_value=httpx.Response(200, text=EMPTY_LISTRECORDS)
+    )
+    await search_iaa_impl("anything", max_results=5, collection="all")
+    assert route.called
+    sent_url = str(route.calls.last.request.url)
+    assert "set=" not in sent_url
 
 
 @pytest.mark.asyncio
