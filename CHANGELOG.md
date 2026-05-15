@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Pfad II Sprint 3 — OA aggregator + research repository)
+- `search_core` MCP tool against `api.core.ac.uk/v3/search/works`.
+  Requires `CORE_API_KEY` (free tier registerable at
+  https://core.ac.uk/services/api); without it the adapter raises
+  `CoreMissingApiKey` rather than firing an unauthenticated 401 —
+  explicit config error beats silent failure. Aggregator detection:
+  `dataProvider` entries matching ResearchGate / Academia.edu /
+  Google Books / CiteSeerX flip `audit.aggregator=True` and
+  `audit.warn_marker=True`, so the inline-citation builder prepends
+  ⚠️ and picks the domain-title variant — the secondary-source nature
+  is structurally visible. Document-type verification_note surfaces
+  theses / working papers / reports so the agent can weight them.
+  18 unit tests in `tests/test_core.py`.
+- `search_zenodo` MCP tool against `zenodo.org/api/records`. No API
+  key. Every Zenodo record has a DOI (`10.5281/zenodo.<int>`) so
+  Author-Year form is guaranteed. Non-article resource types
+  (dataset, software, presentation, poster, thesis) get a
+  `audit.verification_note=resource_type=<type>` hint without setting
+  warn_marker — software DOIs are legitimate citation targets, just
+  not journal articles. HTML in descriptions is stripped to plain
+  text for `DAOPaper.abstract`. 18 unit tests in `tests/test_zenodo.py`.
+- `Identifiers.core_id` field. Inline-citation builder gains a CORE
+  landing fallback (`https://core.ac.uk/works/{id}`) below
+  Semantic Scholar, because CORE is itself an aggregator surface for
+  institutional repos.
+
+### Migration documentation
+- `docs/2026-05-15-paper-search-mcp-migration.md` — step-by-step
+  walkthrough for switching off `paper-search-mcp` in OpenCode and
+  routing the six cross-platform queries through this server instead.
+  Includes dual-run period, smoke test, rollback path, env-var
+  checklist.
+
 ### Added (Pfad II Sprint 2 — citation graph + preprints)
 - `search_semantic_scholar` MCP tool against
   `api.semanticscholar.org/graph/v1/paper/search`. Optional API key
