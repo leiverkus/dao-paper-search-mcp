@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-05-15
+
+Bibliography-friendly DOI rendering. Observed live: at the end of a
+research-stand document the agent rendered every reference's link as
+`[(doi.org)](https://doi.org/...)` instead of showing the DOI string
+in the visible label. The schema didn't expose a DOI-string variant —
+it only had Author-Year, domain, and domain-title. Sprint 6 adds that
+variant and tells the agent (via tool docstrings + model docstring)
+when to pick it over the body-text default.
+
+### Added
+- `InlineCitation.display_label_doi` — the bare DOI string (e.g.
+  `"10.1179/tav.1984.1984.2.189"`) when a DOI is registered; `None`
+  otherwise.
+- `InlineCitation.markdown_doi` — pre-rendered Markdown link with the
+  DOI string in the visible label, e.g.
+  `[(10.1179/tav.1984.1984.2.189)](https://doi.org/10.1179/...)`. The
+  URL still resolves via `doi.org`; only the label changes from
+  `doi.org` to the DOI itself, which is what scholarly readers expect
+  in bibliography / reference-list entries.
+- Two new unit tests in `tests/test_inline_citation.py` covering
+  `markdown_doi` set / unset behaviour.
+
+### Changed
+- Tool docstrings on all 10 search adapters now explicitly hint:
+  *"For bibliography or reference-list entries, prefer
+  `inline_citation.markdown_doi` when present."*
+- `DAOPaper` model docstring documents the per-context variant
+  selection (body-text → recommended; bibliography → DOI; web-hit
+  → domain-title; print-only → fallback).
+- README "Inline citations" section now lists `markdown_doi` /
+  `display_label_doi` and explains per-context variant selection.
+
+### Non-breaking
+Schema extension is additive. Existing consumers reading
+`markdown_recommended` for body text are unaffected.
+
 ## [0.5.0] - 2026-05-15
 
 The IAA-MVP-incomplete asterisk is gone. `search_iaa` now talks
@@ -218,6 +255,7 @@ most relevant to DAO/Digital-Humanities research.
   upstream SSR is restored or a playwright fallback is added post-MVP.
   See README "Known limitations".
 
-[Unreleased]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.6.0
 [0.5.0]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.5.0
 [0.4.0]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.4.0

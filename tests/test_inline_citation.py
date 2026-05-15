@@ -46,6 +46,10 @@ def test_recommended_uses_authoryear_for_doi_hit() -> None:
     assert ic.markdown_recommended == "[(Cohen 1979)](https://doi.org/10.2307/1356668)"
     assert ic.markdown_authoryear == "[(Cohen 1979)](https://doi.org/10.2307/1356668)"
     assert ic.markdown_domain == "[(doi.org)](https://doi.org/10.2307/1356668)"
+    # DOI variant — visible label is the DOI string itself (for
+    # bibliography entries where readers want to read/copy the DOI).
+    assert ic.markdown_doi == "[(10.2307/1356668)](https://doi.org/10.2307/1356668)"
+    assert ic.display_label_doi == "10.2307/1356668"
     # Title short enough to fit unchanged.
     assert ic.markdown_domain_title == (
         "[(doi.org — The Iron Age Fortresses in the Central Negev)]"
@@ -246,6 +250,42 @@ def test_anonymous_skips_authoryear_variant() -> None:
         "[(example.org — Anonymous note)](https://example.org/x)"
     )
     assert ic.fallback_text == "Anon. 2024"
+
+
+def test_markdown_doi_is_none_when_no_doi_present() -> None:
+    """Without a DOI there's nothing to put in the DOI label.
+    The agent falls back to other variants for bibliography entries."""
+    ic = build_inline_citation(
+        authors=["Cohen, R."],
+        year=1979,
+        pages=None,
+        title="t",
+        identifiers=Identifiers(zenon_id="123"),
+        landing_page_url=None,
+        open_access_url=None,
+        audit=_audit(),
+    )
+    assert ic.markdown_doi is None
+    assert ic.display_label_doi is None
+    # Other variants still present.
+    assert ic.markdown_authoryear is not None
+    assert ic.markdown_domain == "[(zenon.dainst.org)](https://zenon.dainst.org/Record/123)"
+
+
+def test_markdown_doi_uses_doi_org_url_regardless_of_landing() -> None:
+    """If a hit has both a DOI and a landing URL, the DOI variant
+    still points at doi.org/{doi} — never the landing URL."""
+    ic = build_inline_citation(
+        authors=["Author, A."],
+        year=2024,
+        pages=None,
+        title="t",
+        identifiers=Identifiers(doi="10.1/x", zenon_id="999"),
+        landing_page_url="https://zenon.dainst.org/Record/999",
+        open_access_url=None,
+        audit=_audit(),
+    )
+    assert ic.markdown_doi == "[(10.1/x)](https://doi.org/10.1/x)"
 
 
 def test_aggregator_picks_domain_title_form_and_warns() -> None:

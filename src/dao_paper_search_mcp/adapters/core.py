@@ -307,7 +307,10 @@ def register(mcp: FastMCP) -> None:
         a hit — do not reformat. CORE hits sourced from aggregators
         (ResearchGate, Academia.edu, Google Books) are flagged with
         ``audit.aggregator=True``; their markdown_recommended will
-        already carry a ⚠️ prefix.
+        already carry a ⚠️ prefix. For bibliography or reference-list
+        entries, prefer ``inline_citation.markdown_doi`` when present —
+        the visible label is the actual DOI string, useful for
+        cross-reference and BibTeX round-tripping.
 
         Args:
             query: free-text search query.

@@ -1,9 +1,10 @@
 """Builder for the ``InlineCitation`` block on every ``DAOPaper``.
 
 Pure function, no network I/O. Pre-renders multiple Markdown variants
-so the agent picks the form that fits its prose (Author-Year for body
-text, domain-plus-title for web references, domain-only for footnotes)
-and copies the chosen variant verbatim.
+so the agent picks the form that fits its prose: Author-Year for body
+text, domain-plus-title for web references, domain-only for footnotes,
+DOI-string for bibliography entries. The agent copies the chosen
+variant verbatim.
 
 Priority of ``primary_url``:
     DOI > OpenAlex > Zenon > IAA > ADAJ > open_access_url > landing_page_url > None
@@ -201,12 +202,20 @@ def build_inline_citation(
     markdown_domain_title = (
         f"[({domain} — {trunc_title})]({primary_url})" if trunc_title else None
     )
+    # DOI variant — only when a DOI is present. The label shows the
+    # actual DOI string so bibliography entries surface it directly,
+    # which is what readers want for cross-reference and BibTeX
+    # round-tripping. The URL still resolves via doi.org.
+    markdown_doi = (
+        f"[({identifiers.doi})]({primary_url})" if identifiers.doi else None
+    )
 
     display_label_authoryear = ay_label
     display_label_domain = domain
     display_label_domain_title = (
         f"{domain} — {trunc_title}" if trunc_title else None
     )
+    display_label_doi = identifiers.doi if identifiers.doi else None
 
     # Heuristic for the agent's first-choice variant.
     # Aggregator hits override author-year because the reader must see
@@ -231,9 +240,11 @@ def build_inline_citation(
         display_label_authoryear=display_label_authoryear,
         display_label_domain=display_label_domain,
         display_label_domain_title=display_label_domain_title,
+        display_label_doi=display_label_doi,
         markdown_authoryear=markdown_authoryear,
         markdown_domain=markdown_domain,
         markdown_domain_title=markdown_domain_title,
+        markdown_doi=markdown_doi,
         markdown_recommended=markdown_recommended,
         fallback_text=fallback_text,
     )

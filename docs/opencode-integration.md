@@ -15,12 +15,12 @@ Add the following entry to the `mcp` block, alongside the existing
   "type": "local",
   "command": [
     "/opt/homebrew/bin/uvx",
-    "--from", "git+https://github.com/leiverkus/dao-paper-search-mcp@v0.5.0",
+    "--from", "git+https://github.com/leiverkus/dao-paper-search-mcp@v0.6.0",
     "python", "-m", "dao_paper_search_mcp.server"
   ],
   "enabled": true,
   "environment": {
-    "WIKIDATA_USER_AGENT": "dao-paper-search-mcp/0.5 (patrick.leiverkus@uni-oldenburg.de)",
+    "WIKIDATA_USER_AGENT": "dao-paper-search-mcp/0.6 (patrick.leiverkus@uni-oldenburg.de)",
     "DAO_PAPER_SEARCH_RATE_LIMIT_MS": "1000",
     "CORE_API_KEY": "${CORE_API_KEY}",
     "SEMANTIC_SCHOLAR_API_KEY": "${SEMANTIC_SCHOLAR_API_KEY}"

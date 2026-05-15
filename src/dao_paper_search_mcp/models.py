@@ -110,14 +110,21 @@ class InlineCitation(BaseModel):
     Output-shape lock-in: by handing the agent ready Markdown, we
     structurally enforce AGENTS.md's inline-link rule instead of
     relying on prompt-side guidance. Multiple variants are exposed
-    because empirically (Qwen 3.6 Plus test, 2026-05-15) the agent
-    picks the variant that fits its surrounding prose: Author-Year
-    inside body text, domain-plus-title for web-style references,
-    domain-only for footnotes.
+    because the agent picks the variant that fits its surrounding
+    prose:
 
-    ``markdown_recommended`` is the first-choice render — already
-    prefixed with ⚠️ when ``audit.warn_marker`` is set, so the agent
-    can copy it verbatim without re-applying the warning rule.
+    - **Body text:** ``markdown_recommended`` (defaults to Author-Year
+      form). Author-Year is empirically what the agent renders when
+      URLs and metadata flow together (Qwen 3.6 Plus test, 2026-05-15).
+    - **Web references / domain-anchored citations:**
+      ``markdown_domain_title`` or ``markdown_domain``.
+    - **Bibliography / reference-list entries:** ``markdown_doi`` when
+      a DOI is present — the visible label is the actual DOI string,
+      which is what readers want for cross-reference and BibTeX
+      round-tripping. Falls back to ``markdown_domain`` or
+      ``markdown_authoryear`` when no DOI.
+    - **Aggregator / warn-flagged hits:** ``markdown_recommended``
+      already carries the ⚠️ prefix; no manual re-application needed.
     """
 
     primary_url: Optional[HttpUrl] = None
@@ -126,10 +133,12 @@ class InlineCitation(BaseModel):
     display_label_authoryear: Optional[str] = None
     display_label_domain: Optional[str] = None
     display_label_domain_title: Optional[str] = None
+    display_label_doi: Optional[str] = None
 
     markdown_authoryear: Optional[str] = None
     markdown_domain: Optional[str] = None
     markdown_domain_title: Optional[str] = None
+    markdown_doi: Optional[str] = None
 
     markdown_recommended: str
     fallback_text: str
@@ -151,6 +160,15 @@ class DAOPaper(BaseModel):
     ``landing_page_url`` / ``authors`` — the builder has already chosen
     the format that fits the source. Only fall back to
     ``inline_citation.fallback_text`` when ``primary_url`` is ``null``.
+
+    For bibliography / reference-list entries (the numbered "Zitierte
+    Quellen" section at the end of a research-stand document), prefer
+    ``inline_citation.markdown_doi`` when present — it renders the DOI
+    string itself in the visible label (e.g.
+    ``[(10.1179/tav.1984.1984.2.189)](https://doi.org/10.1179/…)``)
+    instead of just ``[(doi.org)](…)``. This is what scholarly readers
+    expect for cross-reference and BibTeX round-tripping. Falls back
+    to ``markdown_domain`` or ``markdown_authoryear`` when no DOI.
     """
 
     title: str

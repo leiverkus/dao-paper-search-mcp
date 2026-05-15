@@ -279,7 +279,11 @@ def register(mcp: FastMCP) -> None:
         Citation rendering: each returned ``DAOPaper`` carries an
         ``inline_citation`` block with pre-rendered Markdown. Copy
         ``inline_citation.markdown_recommended`` verbatim when citing a
-        hit — do not reformat to ``[(domain)](url)``.
+        hit — do not reformat to ``[(domain)](url)``. Every Crossref
+        hit has a DOI, so for bibliography or reference-list entries
+        use ``inline_citation.markdown_doi`` — the visible label is
+        the actual DOI string, useful for cross-reference and BibTeX
+        round-tripping.
 
         Args:
             query: free-text bibliographic query (matches title, authors,

@@ -312,7 +312,10 @@ def register(mcp: FastMCP) -> None:
         Citation rendering: each returned ``DAOPaper`` carries an
         ``inline_citation`` block with pre-rendered Markdown. Copy
         ``inline_citation.markdown_recommended`` verbatim — do not
-        reformat to ``[(domain)](url)``.
+        reformat to ``[(domain)](url)``. For bibliography or
+        reference-list entries, prefer ``inline_citation.markdown_doi``
+        when present — the visible label is the actual DOI string,
+        useful for cross-reference and BibTeX round-tripping.
 
         Args:
             query: free-text search (Lucene-style operators ``AND``/

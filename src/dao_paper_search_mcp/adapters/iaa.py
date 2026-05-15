@@ -426,6 +426,10 @@ def register(mcp: FastMCP) -> None:
         ``inline_citation.markdown_recommended`` verbatim — do not
         reformat to ``[(domain)](url)``. Almost every IAA record has a
         DOI, so the recommended form is ``[(Author Year)](doi.org/…)``.
+        For bibliography or reference-list entries, prefer
+        ``inline_citation.markdown_doi`` — the visible label is the
+        actual DOI string, useful for cross-reference and BibTeX
+        round-tripping.
 
         Args:
             query: free-text query. Tokens are AND-matched against

@@ -319,7 +319,10 @@ def register(mcp: FastMCP) -> None:
         a hit — do not reformat to ``[(domain)](url)``. For DOI hits
         the recommended form is ``[(Author Year)](doi.org/…)``; for
         ArXiv-only hits it falls back to ``arxiv.org``; for everything
-        else, the Semantic Scholar landing page.
+        else, the Semantic Scholar landing page. For bibliography or
+        reference-list entries, prefer ``inline_citation.markdown_doi``
+        when present — the visible label is the actual DOI string,
+        useful for cross-reference and BibTeX round-tripping.
 
         Set ``SEMANTIC_SCHOLAR_API_KEY`` in the environment for higher
         rate limits — the tool works without one but is throttled to

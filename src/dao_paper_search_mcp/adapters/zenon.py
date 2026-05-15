@@ -293,7 +293,10 @@ def register(mcp: FastMCP) -> None:
         label, and any ⚠️ warning prefix. Do not reformat to
         ``[(domain)](url)`` or any other shape. Use
         ``inline_citation.fallback_text`` only when ``primary_url`` is
-        ``null`` (print-only literature).
+        ``null`` (print-only literature). For bibliography or
+        reference-list entries, prefer ``inline_citation.markdown_doi``
+        when present — the visible label is the actual DOI string,
+        useful for cross-reference and BibTeX round-tripping.
 
         Args:
             query: free-text keyword query (CQL-style boolean operators

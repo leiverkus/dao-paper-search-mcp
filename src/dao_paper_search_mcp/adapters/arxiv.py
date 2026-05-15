@@ -326,7 +326,10 @@ def register(mcp: FastMCP) -> None:
         a hit — do not reformat to ``[(domain)](url)``. For preprints
         that gained a journal DOI later, the recommended form points
         at ``doi.org``; for preprint-only hits, it points at
-        ``arxiv.org``.
+        ``arxiv.org``. For bibliography or reference-list entries,
+        prefer ``inline_citation.markdown_doi`` when present — the
+        visible label is the actual DOI string, useful for
+        cross-reference and BibTeX round-tripping.
 
         Args:
             query: search_query in arXiv's Lucene syntax (or free text

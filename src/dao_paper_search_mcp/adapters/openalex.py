@@ -309,6 +309,10 @@ def register(mcp: FastMCP) -> None:
         hit — do not reformat to ``[(domain)](url)``. For DOI-bearing
         hits the recommended form is ``[(Author Year)](doi.org/…)``;
         for DOI-less hits it falls back to the OpenAlex landing page.
+        For bibliography or reference-list entries, prefer
+        ``inline_citation.markdown_doi`` when present — the visible
+        label is the actual DOI string, useful for cross-reference and
+        BibTeX round-tripping.
 
         Args:
             query: free-text search (relevance-ranked).
