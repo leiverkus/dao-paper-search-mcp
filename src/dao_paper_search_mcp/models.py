@@ -86,6 +86,7 @@ class Identifiers(BaseModel):
     adaj_id: Optional[str] = None
     semantic_scholar_id: Optional[str] = None
     arxiv_id: Optional[str] = None
+    core_id: Optional[str] = None
 
 
 class Audit(BaseModel):

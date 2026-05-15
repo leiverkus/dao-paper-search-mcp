@@ -147,6 +147,11 @@ def _pick_primary_url(
         return f"https://arxiv.org/abs/{identifiers.arxiv_id}"
     if identifiers.semantic_scholar_id:
         return f"https://www.semanticscholar.org/paper/{identifiers.semantic_scholar_id}"
+    if identifiers.core_id:
+        # CORE aggregates open-access repository content. The CORE
+        # landing is canonical when no DOI is registered, even though
+        # the underlying source is some institutional repo.
+        return f"https://core.ac.uk/works/{identifiers.core_id}"
     if open_access_url:
         return str(open_access_url)
     if landing_page_url:
