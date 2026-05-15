@@ -1,0 +1,66 @@
+# DAO-curated author disambiguation overrides.
+#
+# Add an entry whenever you encounter an LLM misattribution in real
+# research output (e.g. "Avraham Rosen" instead of "Steven A. Rosen").
+# resolve_author consults this file BEFORE hitting Wikidata or GND, so
+# overrides always win.
+#
+# Schema per entry:
+#   canonical:   required, the form that should be returned
+#   variants:    optional list of alternative spellings the resolver will match
+#   q_id:        optional Wikidata Q-ID
+#   gnd_id:      optional GND (DNB authority file) ID
+#   orcid:       optional ORCID
+#   domain:      optional free-text domain hint
+#   affiliation: optional current institutional affiliation
+#   sites:       optional list of associated archaeological sites
+#   note:        optional disambiguation note ("nicht zu verwechseln mit ...")
+#
+# Matching is case-insensitive and ignores leading/trailing whitespace,
+# commas, and dots in name strings. "S.A. Rosen" -> "sa rosen" -> match.
+
+authors:
+  - canonical: "Steven A. Rosen"
+    variants: ["S.A. Rosen", "Rosen, S.A.", "Steven Rosen", "Avraham Rosen"]
+    domain: "Levant archaeology, lithics, Negev Highlands Survey"
+    affiliation: "Ben Gurion University of the Negev"
+    sites: ["Negev Highlands", "Camel Site"]
+    note: "Häufige LLM-Halluzination: 'Avraham Rosen' existiert nicht."
+
+  - canonical: "Arlene M. Rosen"
+    variants: ["A.M. Rosen", "Rosen, A.M."]
+    domain: "Paleoenvironment, geoarchaeology, Levant"
+    affiliation: "University of Texas at Austin"
+
+  - canonical: "Rudolph Cohen"
+    variants: ["R. Cohen", "Cohen, R.", "Rudolph Cohen (IAA)"]
+    domain: "Negev fortresses, IAA excavations 1970s-90s"
+    affiliation: "Israel Antiquities Authority (deceased 2007)"
+    sites: ["Kadesh-Barnea", "ʿEn Ḥaṣeva", "Negev fortresses"]
+    death_year: 2007
+    note: "Häufig verwechselt mit Mark Cohen (Assyriologe) oder Andrew Cohen."
+
+  - canonical: "Amihai Mazar"
+    variants: ["A. Mazar", "Mazar, A.", "Ami Mazar"]
+    q_id: "Q3266226"
+    domain: "Iron Age Levant, Tel Rehov"
+    affiliation: "Hebrew University of Jerusalem"
+    note: "Nicht zu verwechseln mit Eilat Mazar (Jerusalem-Ausgrabungen) oder Benjamin Mazar."
+
+  - canonical: "Eilat Mazar"
+    variants: ["E. Mazar", "Mazar, E."]
+    domain: "Jerusalem archaeology, City of David"
+    affiliation: "Hebrew University of Jerusalem"
+    death_year: 2021
+
+  - canonical: "Israel Finkelstein"
+    variants: ["I. Finkelstein", "Finkelstein, I."]
+    q_id: "Q717237"
+    domain: "Iron Age Levant, Low Chronology"
+    affiliation: "Tel Aviv University / University of Haifa"
+
+  - canonical: "Yohanan Aharoni"
+    variants: ["Y. Aharoni", "Aharoni, Y."]
+    domain: "Biblical archaeology, Beersheba, Tel Arad"
+    affiliation: "Tel Aviv University (deceased 1976)"
+    death_year: 1976

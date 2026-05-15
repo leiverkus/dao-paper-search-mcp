@@ -14,6 +14,7 @@ from mcp.server.fastmcp import FastMCP
 from .adapters import adaj as _adaj
 from .adapters import iaa as _iaa
 from .adapters import zenon as _zenon
+from .resolvers import wikidata_author as _author
 
 logging.basicConfig(
     stream=sys.stderr,
@@ -39,6 +40,7 @@ async def ping() -> str:
 _zenon.register(mcp)
 _iaa.register(mcp)
 _adaj.register(mcp)
+_author.register(mcp)
 
 
 def main() -> None:
