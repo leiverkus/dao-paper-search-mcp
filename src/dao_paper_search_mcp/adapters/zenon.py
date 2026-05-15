@@ -32,7 +32,10 @@ from typing import Any, Mapping, Optional, Sequence
 import httpx
 from mcp.server.fastmcp import FastMCP
 
-from ..models import DAOPaper, PublicationStatus
+import re
+
+from ..inline_citation import build_inline_citation
+from ..models import Audit, DAOPaper, Identifiers, PublicationStatus
 from ..resolvers.gazetteer import site_id_tokens_from_zenon_record
 
 log = logging.getLogger(__name__)
@@ -139,6 +142,35 @@ def _build_open_access_url(record: Mapping[str, Any]) -> Optional[str]:
     return None
 
 
+_DOI_RE = re.compile(r"10\.\d{4,9}/[^\s\"<>]+")
+
+
+def _extract_doi(record: Mapping[str, Any]) -> Optional[str]:
+    """Scan a Zenon record for an external DOI.
+
+    Zenon's VuFind API surfaces DOIs in two places: occasionally as a
+    top-level ``DOI``/``doi`` field, and more often embedded in the
+    ``urls`` list (e.g. ``https://doi.org/10.1163/...``). We accept either.
+    """
+    for key in ("DOI", "doi"):
+        val = record.get(key)
+        if val:
+            s = str(val).strip()
+            s = s.removeprefix("https://doi.org/").removeprefix("http://doi.org/")
+            m = _DOI_RE.search(s)
+            if m:
+                return m.group(0).rstrip(".,;)")
+    for url in record.get("urls") or []:
+        if isinstance(url, dict):
+            href = url.get("url") or url.get("href") or ""
+        else:
+            href = str(url)
+        m = _DOI_RE.search(href)
+        if m:
+            return m.group(0).rstrip(".,;)")
+    return None
+
+
 def _record_to_paper(record: Mapping[str, Any]) -> DAOPaper:
     title = (record.get("title") or "").strip().rstrip(":/ ")
     subtitle = (record.get("subTitle") or "").strip().rstrip(":/ ")
@@ -147,18 +179,39 @@ def _record_to_paper(record: Mapping[str, Any]) -> DAOPaper:
     else:
         full_title = title or "(untitled)"
 
+    authors = _flatten_authors(record)
+    year = _first_int(record.get("publicationDates") or [])
+    zenon_id = str(record.get("id")) if record.get("id") is not None else None
+    open_access_url = _build_open_access_url(record)
+    landing_page_url = _build_landing_url(record)
+    identifiers = Identifiers(doi=_extract_doi(record), zenon_id=zenon_id)
+    audit = Audit(primary_source=True, aggregator=False, warn_marker=False)
+    inline_citation = build_inline_citation(
+        authors=authors,
+        year=year,
+        pages=None,
+        title=full_title,
+        identifiers=identifiers,
+        landing_page_url=landing_page_url,
+        open_access_url=open_access_url,
+        audit=audit,
+    )
+
     return DAOPaper(
         title=full_title,
-        authors=_flatten_authors(record),
-        year=_first_int(record.get("publicationDates") or []),
+        authors=authors,
+        year=year,
         journal_or_volume=_series_or_journal(record),
         doi_or_id=f"zenon:{record.get('id')}",
         source="zenon",
-        open_access_url=_build_open_access_url(record),  # type: ignore[arg-type]
-        landing_page_url=_build_landing_url(record),  # type: ignore[arg-type]
+        open_access_url=open_access_url,  # type: ignore[arg-type]
+        landing_page_url=landing_page_url,  # type: ignore[arg-type]
         language=_detect_language(record),
         publication_status=PublicationStatus.PUBLISHED,
         site_ids=site_id_tokens_from_zenon_record(record),
+        identifiers=identifiers,
+        audit=audit,
+        inline_citation=inline_citation,
     )
 
 
@@ -232,6 +285,15 @@ def register(mcp: FastMCP) -> None:
         """Search the Zenon DAI catalog — the German Archaeological Institute's
         bibliography (~1M records, multilingual). Best for German-language Levant
         archaeology, classical antiquity, and DAI publication series.
+
+        Citation rendering: each returned ``DAOPaper`` carries an
+        ``inline_citation`` block with pre-rendered Markdown. When citing a
+        hit in body text, copy ``inline_citation.markdown_recommended``
+        verbatim — it already encodes the canonical URL, the Author-Year
+        label, and any ⚠️ warning prefix. Do not reformat to
+        ``[(domain)](url)`` or any other shape. Use
+        ``inline_citation.fallback_text`` only when ``primary_url`` is
+        ``null`` (print-only literature).
 
         Args:
             query: free-text keyword query (CQL-style boolean operators

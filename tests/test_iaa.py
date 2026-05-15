@@ -89,6 +89,12 @@ def test_parse_results_server_rendered() -> None:
     assert first.language == "en"
     assert str(first.landing_page_url) == "https://publications.iaa.org.il/atiqot/95/3"
     assert first.doi_or_id == "iaa:atiqot/95/3"
+    # Inline-citation integration: Author-Year recommended form.
+    assert first.inline_citation is not None
+    assert first.inline_citation.markdown_recommended.startswith("[(Cohen")
+    assert "2019" in first.inline_citation.markdown_recommended
+    assert first.identifiers is not None
+    assert first.identifiers.iaa_pub_id == "atiqot/95/3"
 
     hebrew = papers[2]
     assert hebrew.language == "he"

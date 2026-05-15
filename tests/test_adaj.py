@@ -62,6 +62,11 @@ def test_parse_results_first_hit_shape() -> None:
     assert p.open_access_url is not None
     assert str(p.open_access_url).endswith(".pdf")
     assert "SHAJ" in (p.journal_or_volume or "") or "Studies" in (p.journal_or_volume or "")
+    # Inline-citation integration: Author-Year recommended form.
+    assert p.inline_citation is not None
+    assert p.inline_citation.markdown_recommended.startswith("[(Beit-Arieh 2009)]")
+    assert p.identifiers is not None
+    assert p.identifiers.adaj_id == "chapter:212"
 
 
 def test_filter_by_year_inclusive_bounds() -> None:

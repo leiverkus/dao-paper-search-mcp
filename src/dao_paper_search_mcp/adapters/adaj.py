@@ -25,7 +25,8 @@ import httpx
 from bs4 import BeautifulSoup, Tag
 from mcp.server.fastmcp import FastMCP
 
-from ..models import DAOPaper, PublicationStatus
+from ..inline_citation import build_inline_citation
+from ..models import Audit, DAOPaper, Identifiers, PublicationStatus
 
 log = logging.getLogger(__name__)
 
@@ -109,6 +110,24 @@ def _parse_result_tag(tag: Tag) -> Optional[DAOPaper]:
     if pub_type and pub_type.lower() not in ("article", "chapter", "paper"):
         note = f"publication_type={pub_type}"
 
+    identifiers = Identifiers(adaj_id=chapter_id)
+    audit = Audit(
+        primary_source=True,
+        aggregator=False,
+        verification_note=note,
+        warn_marker=bool(note),
+    )
+    inline_citation = build_inline_citation(
+        authors=authors,
+        year=year,
+        pages=pages,
+        title=title,
+        identifiers=identifiers,
+        landing_page_url=landing,
+        open_access_url=pdf_url,
+        audit=audit,
+    )
+
     return DAOPaper(
         title=title,
         authors=authors,
@@ -122,6 +141,9 @@ def _parse_result_tag(tag: Tag) -> Optional[DAOPaper]:
         language="en",  # DoA archive is English-only in this portal
         publication_status=PublicationStatus.PUBLISHED,
         verification_note=note,
+        identifiers=identifiers,
+        audit=audit,
+        inline_citation=inline_citation,
     )
 
 
@@ -200,6 +222,13 @@ def register(mcp: FastMCP) -> None:
         Note: ``year_from``/``year_to`` are applied client-side after retrieval
         (the upstream GET search ignores year parameters). Narrow your query
         keywords if year filtering yields too few hits.
+
+        Citation rendering: each returned ``DAOPaper`` carries an
+        ``inline_citation`` block with pre-rendered Markdown. Copy
+        ``inline_citation.markdown_recommended`` verbatim when citing a
+        hit — do not reformat to ``[(domain)](url)``. Use
+        ``inline_citation.fallback_text`` only when ``primary_url`` is
+        ``null``.
 
         Args:
             query: free-text query (e.g. ``"Negev fortresses"``).

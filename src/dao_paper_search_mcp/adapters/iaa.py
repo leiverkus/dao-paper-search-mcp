@@ -36,7 +36,8 @@ import httpx
 from bs4 import BeautifulSoup, Tag
 from mcp.server.fastmcp import FastMCP
 
-from ..models import DAOPaper, PublicationStatus
+from ..inline_citation import build_inline_citation
+from ..models import Audit, DAOPaper, Identifiers, PublicationStatus
 
 log = logging.getLogger(__name__)
 
@@ -121,6 +122,23 @@ def _parse_result_tag(tag: Tag) -> Optional[DAOPaper]:
     path_id = href.replace(IAA_BASE, "").strip("/")
     doi_or_id = f"iaa:{path_id}" if path_id else f"iaa:{title[:48]}"
 
+    block_text = tag.get_text(" ", strip=True)
+    doi_match = re.search(r"10\.\d{4,9}/[^\s\"<>]+", block_text)
+    doi = doi_match.group(0).rstrip(".,;)") if doi_match else None
+
+    identifiers = Identifiers(doi=doi, iaa_pub_id=path_id or None)
+    audit = Audit(primary_source=True, aggregator=False, warn_marker=False)
+    inline_citation = build_inline_citation(
+        authors=authors,
+        year=year,
+        pages=None,
+        title=title,
+        identifiers=identifiers,
+        landing_page_url=href,
+        open_access_url=None,
+        audit=audit,
+    )
+
     return DAOPaper(
         title=title,
         authors=authors,
@@ -130,6 +148,9 @@ def _parse_result_tag(tag: Tag) -> Optional[DAOPaper]:
         landing_page_url=href,  # type: ignore[arg-type]
         language=_detect_language(f"{title} {author_text}"),
         publication_status=PublicationStatus.PUBLISHED,
+        identifiers=identifiers,
+        audit=audit,
+        inline_citation=inline_citation,
     )
 
 
@@ -255,6 +276,13 @@ def register(mcp: FastMCP) -> None:
         rendering or a playwright fallback is added post-MVP. Use
         search_zenon as a cross-check — Zenon DAI partially indexes IAA
         publications.
+
+        Citation rendering: each returned ``DAOPaper`` carries an
+        ``inline_citation`` block with pre-rendered Markdown. Copy
+        ``inline_citation.markdown_recommended`` verbatim when citing a
+        hit — do not reformat to ``[(domain)](url)``. Use
+        ``inline_citation.fallback_text`` only when ``primary_url`` is
+        ``null``.
 
         Args:
             query: free-text query.

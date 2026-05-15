@@ -140,6 +140,15 @@ async def test_search_zenon_impl_happy_path() -> None:
     # Briefing Iteration 2 / gazetteer integration: DAILinks.gazetteer
     # is automatically promoted into site_ids as ``gazetteer:<gazId>``.
     assert "gazetteer:2043520" in p.site_ids
+    # Inline-citation integration: builder ran, picked the Author-Year
+    # variant as ``markdown_recommended`` (academic hit with year), and
+    # populated the alternate variants.
+    assert p.inline_citation is not None
+    assert p.inline_citation.markdown_recommended.startswith("[(Beit-Arieh")
+    assert p.inline_citation.markdown_domain is not None
+    assert p.inline_citation.markdown_domain.startswith("[(zenon.dainst.org)]")
+    assert p.identifiers is not None
+    assert p.identifiers.zenon_id == "001388596"
 
 
 @pytest.mark.asyncio
