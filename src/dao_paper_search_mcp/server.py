@@ -15,6 +15,7 @@ from .adapters import adaj as _adaj
 from .adapters import crossref as _crossref
 from .adapters import iaa as _iaa
 from .adapters import openalex as _openalex
+from .adapters import semantic_scholar as _semantic_scholar
 from .adapters import zenon as _zenon
 from .resolvers import gazetteer as _gazetteer
 from .resolvers import wikidata_author as _author
@@ -45,6 +46,7 @@ _iaa.register(mcp)
 _adaj.register(mcp)
 _crossref.register(mcp)
 _openalex.register(mcp)
+_semantic_scholar.register(mcp)
 _author.register(mcp)
 _gazetteer.register(mcp)
 

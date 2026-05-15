@@ -84,6 +84,8 @@ class Identifiers(BaseModel):
     zenon_id: Optional[str] = None
     iaa_pub_id: Optional[str] = None
     adaj_id: Optional[str] = None
+    semantic_scholar_id: Optional[str] = None
+    arxiv_id: Optional[str] = None
 
 
 class Audit(BaseModel):

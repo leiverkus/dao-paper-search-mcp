@@ -140,6 +140,13 @@ def _pick_primary_url(
         if identifiers.adaj_id.startswith("publication:"):
             n = identifiers.adaj_id.split(":", 1)[1]
             return f"https://publication.doa.gov.jo/Publications/ViewPublic/{n}"
+    if identifiers.arxiv_id:
+        # arXiv ranks above Semantic Scholar because arxiv.org is the
+        # source repository for preprints, while S2 is a pure indexer.
+        # When a paper has both, the canonical URL is the arXiv one.
+        return f"https://arxiv.org/abs/{identifiers.arxiv_id}"
+    if identifiers.semantic_scholar_id:
+        return f"https://www.semanticscholar.org/paper/{identifiers.semantic_scholar_id}"
     if open_access_url:
         return str(open_access_url)
     if landing_page_url:
