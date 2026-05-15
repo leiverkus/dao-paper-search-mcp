@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Acceptance test suite (`tests/test_verification_suite.py`) with the
+  five frozen reference fingerprints from the briefing (Abschnitt VII).
+  The non-negotiable contract — the Ben-Ami 2026 Levant 58(1)
+  hallucination must return no match via Zenon — passes. Three
+  references are xfail until upstream coverage expands:
+  - Ben-Ami 2024 *Levant*: Zenon does not yet index 2024 *Levant* issues
+  - Bienkowski/Tebes 2024 *PEQ*: same for 2024 *PEQ* issues
+  - Carmi/Segal 2007 IAA ¹⁴C: IAA backend is JS-only (see `search_iaa`)
+  The Cohen/Yisrael 1995 reference resolves via the companion Israel
+  Museum catalog *On the road to Edom: discoveries from 'En Ḥaẓeva*.
 - `resolve_author` MCP tool with three-layer resolution: DAO override
   YAML > Wikidata SPARQL > GND (lobid.org) fallback. Seeded with 7 DAO
   override entries including the "Avraham Rosen" → "Steven A. Rosen"
