@@ -1,0 +1,994 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head><!-- inj yui3-seed: --><script type='text/javascript' src='//cdnjs.cloudflare.com/ajax/libs/yui/3.6.0/yui/yui-min.js'></script><script type='text/javascript' src='//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js'></script><!-- Adobe Analytics --><script type='text/javascript' src='https://assets.adobedtm.com/4a848ae9611a/d0e96722185b/launch-d525bb0064d8.min.js'></script><script type='text/javascript' src=/assets/nr_browser_production.js></script>
+
+<!-- def.1 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title> Search</title>
+
+
+
+<meta  http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta  name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- sh.1 -->
+<link rel="stylesheet" href="/ir-style.css" type="text/css" media="screen">
+<link rel="stylesheet" href="/ir-custom.css" type="text/css" media="screen">
+<link rel="stylesheet" href="/ir-print.css" type="text/css" media="print">
+<link rel="stylesheet" href="/ir-local.css" type="text/css" media="screen">
+<link rel="alternate" type="application/rss+xml" title="Site Feed" href="/recent.rss">
+<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+<!--[if IE]>
+<link rel="stylesheet" href="/ir-ie.css" type="text/css" media="screen">
+<![endif]-->
+
+<!-- JS -->
+
+
+
+<!-- end sh.1 -->
+<link rel="stylesheet" href="/assets/cgi/css/search/query.css" type="text/css" media="screen">
+<link rel="stylesheet" href="/assets/cgi/css/global-alert.css" type="text/css" media="screen">
+<link rel="stylesheet" href="/assets/cgi/css/global/utils.css" type="text/css" media="screen">
+
+
+<!-- stripped inline yui3-seed -->
+<script type="text/javascript" src="/assets/scripts/bepress-init.pack.js"></script>
+<script type="text/javascript">
+			Bepress.cgiUrlBase = '';
+		</script>
+<script src="/assets/cgi/js/spinner.pack.js" type="text/javascript"></script>
+<script src="/assets/cgi/js/search/solr.pack.js" type="text/javascript"></script>
+<script src="/assets/cgi/js/search/query-screen.js" type="text/javascript"></script>
+<script src="/assets/cgi/js/statsDispatcher.pack.js" type="text/javascript"></script>
+<script src="/assets/footnoteLinks.js" type="text/javascript"></script>
+<script type="text/javascript">
+YUI({
+}).use('bepress.search.queryscreen', 'node', 'datatype', function(Y){
+	
+	Y.on( 'domready', function () {
+
+		var fieldSelects, rowList, advContextNode, queryScreen, facetTypes, i;
+
+		
+		Y.bepress.search.solr.setAllowedFields( {"document_type":1,"author_lname":1,"publication_title":1,"subject":1,"author":1,"bp_author_id":1,"corporate_author":1,"text":1,"author_fname":1,"abstract":1,"title":1,"publication":1,"collected_from_sw":1,"institution":1} );
+		
+		queryScreen = new Y.bepress.search.QueryScreen( {
+			
+			errors: {
+				searchFailure:        "We're sorry, we were unable to process your search request. "
+				                    + "This may have been a temporary problem, please wait a few moments "
+				                    + "and try again.<br/>	(Error: {errmsg})"
+				, nothingEntered:     "Please enter a search term first"
+				, invalidDateEntered: "You entered '{errmsg}', but that doesn't look like a date to me."
+				, parseError:         "The advanced search form does not support this syntax: {errmsg}"
+				, syntaxNotSupported: "The advanced search form does not support this syntax. {errmsg}"
+				, timeout:            "Your search request has timed out. Please wait a moment and try again."
+				, emptyExport:        "No results matched your search."
+				, dateFormat:         "{errmsg} format is MM/DD/YYYY."
+			}
+
+			
+			, templates: {
+				resultsTemplate: {
+						download: '<div class="result query" role="listitem">\
+	<p class="grid_10">\
+		<span class="title"><a href="{articleUrl}">{articleTitle}<\/a><\/span><br>\
+		<!-- first 5(?) -->\
+		<span class="author"><i>{authorsLabel Author~Authors}:<\/i> <strong>{firstAuthorNames}<\/strong><\/span><br>\
+		<span class="pub"><i>Publication:<\/i> <a href="{publicationUrl}">{publicationTitle}<\/a><\/span><br>\
+		<span class="download {downloadFormat}"><a class="{downloadFormat}" href="{downloadLink}" target="_blank" title="Opens in new window">Download<\/a><\/span>\
+	<\/p>\
+	<p class="grid_2 fr">\
+		<span class="year"><i>Date:<\/i> <strong>{publicationDate}<\/strong><\/span>\
+	<\/p>\
+<\/div>\
+'
+						, metadata: '<div class="result query" role="listitem">\
+	<p class="grid_10">\
+		<span class="title"><a href="{articleUrl}">{articleTitle}<\/a><\/span><br>\
+		<!-- first 5(?) -->\
+		<span class="author"><i>{authorsLabel Author~Authors}:<\/i> <strong>{firstAuthorNames}<\/strong><\/span><br>\
+		<span class="pub"><i>Publication:<\/i> <a href="{publicationUrl}">{publicationTitle}<\/a><\/span><br>\
+	<\/p>\
+	<p class="grid_2 fr">\
+		<span class="year"><i>Date:<\/i> <strong>{publicationDate}<\/strong><\/span>\
+	<\/p>\
+<\/div>\
+'
+						, external: '<div class="result query" role="listitem">\
+	<p class="grid_10">\
+		<span class="title"><a href="{articleUrl}">{articleTitle}<\/a><\/span><br>\
+		<!-- first 5(?) -->\
+		<span class="author"><i>{authorsLabel Author~Authors}:<\/i> <strong>{firstAuthorNames}<\/strong><\/span><br>\
+		<span class="pub"><i>Publication:<\/i> <a href="{publicationUrl}">{publicationTitle}<\/a><\/span><br>\
+		<span class="download"><a class="{downloadFormat}" href="{downloadLink}" target="_blank" title="Opens in new window">Link to Full Text<\/a><\/span>\
+	<\/p>\
+	<p class="grid_2 fr">\
+		<span class="year"><i>Date:<\/i> <strong>{publicationDate}<\/strong><\/span>\
+	<\/p>\
+<\/div>\
+'
+					}
+				, resultsHeaderTemplate:         '<div id="results-wrapper">\
+<div class="query">\
+		<h2 class="grid_12">Searching <em>{contextTitle}<\/em><\/h2>\
+<\/div>\
+<div id="results-sub-header" class="query">\
+	<span class="grid_6">Showing <strong>{count}<\/strong> out of <strong>{numFound}<\/strong> results. Starting at result <strong>{start}<\/strong>.<\/span>	\
+	<form id="save_search" class="grid_6 alpha omega" method="POST" action="\/do\/search\/save_search">\
+		<a href="\/cgi\/notification.cgi" id="my-searches">\
+			<i class="icon-search" aria-hidden="true"><\/i> My saved searches\
+		<\/a>\
+		<a href="{saveUrl}" id="save-search-submit">\
+			<i class="icon-save" aria-hidden="true"><\/i> Save this search\
+		<\/a>\
+	<\/form>\
+<\/div>\
+<\/div>\
+'
+				, resultsExportedHeaderTemplate: '<div id="results-wrapper">\
+<div class="query">\
+		<h2 class="grid_12">Searching <em>{contextTitle}<\/em><\/h2>\
+<\/div>\
+<div id="results-sub-header" class="query">\
+		<span class="grid_6">Exported <strong>{count}<\/strong> results.<\/span>	\
+<\/div>\
+<\/div>\
+'
+				, resultsFooterTemplate:         '<div class="pagination query">\
+  <p class="grid_12">\
+    <ul>\
+      <li>\
+        <span class="fl">\
+          <a id="first-page" class="{firstClass}" href="#query-results" title="First Page">\
+            &laquo; First\
+          <\/a>\
+          <a id="previous-page" class="{previousClass}" href="#query-results" title="Previous Page">\
+            &lt; Prev\
+          <\/a>\
+        <\/span>\
+      <\/li>\
+      <li>\
+        <span class="fr">\
+          <a id="next-page" class="{nextClass}" href="#query-results" title="Next Page">\
+            Next &gt;\
+          <\/a>\
+          <a id="last-page" class="{lastClass}" href="#query-results" title="Last Page">\
+            Last &raquo;\
+          <\/a>\
+        <\/span>\
+      <\/li>\
+    <\/ul>\
+  <\/p>\
+<\/div>\
+'
+				, rowTemplate:                   '<div class="row query">\
+  <p id="p{rownum}">\
+    <span class="fr">\
+      <input type="image" value="Delete" alt="Delete row {rownum}" name="del_row_{rownum}" src="\/assets\/query_minus.gif" class="hidden control-delete-row">\
+      <input type="image" value="Add" alt="Add row {rownum}" name="add_row_{rownum}" src="\/assets\/cgi\/images\/global\/add.png" class="control-add-row">	\
+    <\/span>\
+    <span class="grid_2">\
+	  <label for="op_{rownum}" class="visually-hidden">Choose boolean operator for Search Term {rownum}<\/label>\
+      <select name="op_{rownum}" class="op-sel" id="op_{rownum}">\
+        <option value="AND">AND<\/option>\
+          <option value="OR">OR<\/option>\
+          <option value="NOT">NOT<\/option>\
+      <\/select>\
+    <\/span> \
+	<label for="field_{rownum}" class="visually-hidden">Choose type for Search Term {rownum}<\/label>\
+		<span class="grid_3">\
+			<select name="field_{rownum}" id="field_{rownum}" class="field-sel">\
+                \
+                    <option value="text:">All Fields<\/option>\
+                \
+                    <option value="abstract:">Abstract<\/option>\
+                \
+                    <option value="subject:">Subject<\/option>\
+                \
+                    <option value="author:">Author<\/option>\
+                \
+                    <option value="institution:">Institution<\/option>\
+                \
+                    <option value="title:">Title<\/option>\
+                \
+                    <option value="document_type:">Document Type<\/option>\
+                \
+                    <option value="publication_title:">Publication<\/option>\
+                			<\/select>\
+		<\/span>\
+    <label for="value_{rownum}" class="visually-hidden">Search term {rownum}<\/label>\
+		<span class="grid_6"><input type="text" id="value_{rownum}" name="value_{rownum}" value="" class="term">\
+		<\/span>	\
+		<br class="clear" \/>\
+	<\/p>\
+<\/div>\
+'
+				, facetLinkTemplate:             '	<li><a href="#" class="facet-{facetType}">{facetLabel}<\/a> ({facetCount})<\/li>\
+'
+				, facetMoreLink:                 '	<li class="dropdown">\
+		<div id="more-{facetType}" class="more-container"><ul><\/ul><\/div>\
+		<div name="{facetType}" class="collapse" id="{facetType}-links">\
+			<span class="more" name="{facetType}"><a href="#" name="{facetType}">More &darr;<\/a><\/span><span class="fewer hidden" name="{facetType}"><a href="#" name="{facetType}">Fewer &uarr;<\/a><\/span>\
+		<\/div>\
+	<\/li>\
+'
+				, facetSectionTemplate:          '<dl class="facet">\
+  <dt role="heading" aria-level="3">{label}<\/dt>\
+  <dd>\
+    <ul>\
+    <\/ul>\
+  <\/dd>\
+<\/dl>\
+'
+			}
+
+			
+			, elements: {
+				resultsHeaderEl:  Y.one('#results-header')
+				, resultsListEl:	  Y.one('#results-list')
+				, resultsFooterEl:  Y.one('#results-footer')
+				, errorEl:		  Y.one('#global-alert')
+				, basicSearchEl:	  Y.one('#basic-search')
+				, advancedSearchEl: Y.one('#advanced-search')
+				, facetsEl:         Y.one('#results-facets')
+			}
+
+			
+			, enabledFacets: {
+				
+					"discipline": "Discipline",
+				
+					"download_type": "File Type",
+				
+					"publication_facet": "Publication",
+				
+					"publication_type": "Publication Type",
+				
+					"publication_year": "Publication Year",
+				
+					"subject_facet": "Keyword"
+				
+			}
+
+			, historyAPI:		  !!(window.history && history.pushState)
+
+						, selectedForm: 'basic-search'
+						
+						, authenticated: false
+						
+		});
+
+		
+			queryScreen.addRow( { showAddCtl: true, showDelCtl: false } );
+		
+		
+		rowList = Y.one('#rows');
+		rowList.delegate( ['change', 'keyup'], queryScreen.updateSearchPreview, '#rows', queryScreen );
+		
+		
+		Y.one( '#simple-search')
+			.on('keypress', queryScreen.behaveOnKeyPress, queryScreen);
+		Y.one( '#advanced-search')
+			.delegate( 'keypress', queryScreen.behaveOnKeyPress, 'input[type=text]', queryScreen);
+
+		        rowList.delegate('click', function(e){
+            queryScreen.addRow();
+            e.preventDefault();
+           }, '.control-add-row', Y
+        );
+		
+		rowList.delegate('click', function(e){
+			queryScreen.deleteRow(e.currentTarget);
+			queryScreen.updateSearchPreview();
+			e.preventDefault();
+		   }, '.control-delete-row', Y
+		);
+
+		
+		Y.one('#switch-to-advanced').on('click', function(e){
+			queryScreen.switchToAdvanced();
+			e.preventDefault();
+		});
+		Y.one('#switch-to-basic').on('click', function(e){
+			queryScreen.switchToBasic();
+			e.preventDefault();
+		});
+
+		
+		advContextNode = Y.one('#advanced-context');
+		if ( advContextNode ) {
+			
+			advContextNode.on( 'change', function(e){
+				queryScreen.updateAvailableFormats();
+			});
+			
+			queryScreen.updateAvailableFormats();
+		}
+
+		
+		Y.one('#do-search').on('click', function(e){
+			queryScreen.submitForm(e.currentTarget.get('form'));
+			e.preventDefault();
+		} );
+		Y.one('#do-search-advanced').on('click', function(e){
+			queryScreen.submitForm(e.currentTarget.get('form'));
+			e.preventDefault();
+		} );
+		
+				Y.one('#show-search').on('click', function() {
+			queryScreen.showSearchForm();
+		});
+		Y.one('#hide-search').on('click', function() {
+			queryScreen.shrinkSearchForm();
+		});
+
+		// is there a more YUIish way to do this?
+		if(queryScreen.historyAPI) {
+			window.onpopstate = function(ev) {
+				// Y.log('popstate -- location: '+document.location+', state: '+JSON.stringify(ev.state));
+				queryScreen.handlePopState(ev.state);
+			};
+		}
+
+		
+		Y.one('#do-search').removeAttribute('disabled');
+		Y.one('#switch-to-advanced').removeAttribute('disabled');
+		Y.all('.add-row').removeAttribute('disabled');
+		
+		
+		queryScreen.setSearchContainerHeights();
+		
+		Y.one('#advanced-search').addClass('query-shrinker');
+		Y.one('#basic-search').addClass('query-shrinker');
+
+		
+		
+				
+		
+
+		
+		
+				queryScreen.submitForm(Y.one('#'+queryScreen.selectedForm).one('form'));
+				
+				
+				
+		var clearBtn = Y.one('#clear-discipline-facet');
+		if (clearBtn) {
+			var prevHandlers = clearBtn.getData('clearHandlers');
+			if (prevHandlers) {
+				Y.Array.each(prevHandlers, function (h) {
+					if (h && h.detach) {
+						h.detach();
+					}
+				});
+			}
+			// Define a single function to handle clear + submit
+			var handleClear = function(e) {
+						if (e && (e.type === 'click' || (e.type === 'keydown' && (e.key === 'Enter' || e.key === ' ')))) {
+							e.preventDefault();
+							queryScreen.clearFacet('discipline');
+							var formEl = Y.one('#'+queryScreen.selectedForm).one('form');
+							queryScreen.submitForm(formEl);
+						}
+			        };
+			var clickSub = clearBtn.on('click', handleClear);
+			var keydownSub = clearBtn.on('keydown', handleClear);
+			clearBtn.setData('clearHandlers', [clickSub, keydownSub]);
+		}
+	
+		var clearBtn = Y.one('#clear-download_type-facet');
+		if (clearBtn) {
+			var prevHandlers = clearBtn.getData('clearHandlers');
+			if (prevHandlers) {
+				Y.Array.each(prevHandlers, function (h) {
+					if (h && h.detach) {
+						h.detach();
+					}
+				});
+			}
+			// Define a single function to handle clear + submit
+			var handleClear = function(e) {
+						if (e && (e.type === 'click' || (e.type === 'keydown' && (e.key === 'Enter' || e.key === ' ')))) {
+							e.preventDefault();
+							queryScreen.clearFacet('download_type');
+							var formEl = Y.one('#'+queryScreen.selectedForm).one('form');
+							queryScreen.submitForm(formEl);
+						}
+			        };
+			var clickSub = clearBtn.on('click', handleClear);
+			var keydownSub = clearBtn.on('keydown', handleClear);
+			clearBtn.setData('clearHandlers', [clickSub, keydownSub]);
+		}
+	
+		var clearBtn = Y.one('#clear-publication_facet-facet');
+		if (clearBtn) {
+			var prevHandlers = clearBtn.getData('clearHandlers');
+			if (prevHandlers) {
+				Y.Array.each(prevHandlers, function (h) {
+					if (h && h.detach) {
+						h.detach();
+					}
+				});
+			}
+			// Define a single function to handle clear + submit
+			var handleClear = function(e) {
+						if (e && (e.type === 'click' || (e.type === 'keydown' && (e.key === 'Enter' || e.key === ' ')))) {
+							e.preventDefault();
+							queryScreen.clearFacet('publication_facet');
+							var formEl = Y.one('#'+queryScreen.selectedForm).one('form');
+							queryScreen.submitForm(formEl);
+						}
+			        };
+			var clickSub = clearBtn.on('click', handleClear);
+			var keydownSub = clearBtn.on('keydown', handleClear);
+			clearBtn.setData('clearHandlers', [clickSub, keydownSub]);
+		}
+	
+		var clearBtn = Y.one('#clear-publication_type-facet');
+		if (clearBtn) {
+			var prevHandlers = clearBtn.getData('clearHandlers');
+			if (prevHandlers) {
+				Y.Array.each(prevHandlers, function (h) {
+					if (h && h.detach) {
+						h.detach();
+					}
+				});
+			}
+			// Define a single function to handle clear + submit
+			var handleClear = function(e) {
+						if (e && (e.type === 'click' || (e.type === 'keydown' && (e.key === 'Enter' || e.key === ' ')))) {
+							e.preventDefault();
+							queryScreen.clearFacet('publication_type');
+							var formEl = Y.one('#'+queryScreen.selectedForm).one('form');
+							queryScreen.submitForm(formEl);
+						}
+			        };
+			var clickSub = clearBtn.on('click', handleClear);
+			var keydownSub = clearBtn.on('keydown', handleClear);
+			clearBtn.setData('clearHandlers', [clickSub, keydownSub]);
+		}
+	
+		var clearBtn = Y.one('#clear-publication_year-facet');
+		if (clearBtn) {
+			var prevHandlers = clearBtn.getData('clearHandlers');
+			if (prevHandlers) {
+				Y.Array.each(prevHandlers, function (h) {
+					if (h && h.detach) {
+						h.detach();
+					}
+				});
+			}
+			// Define a single function to handle clear + submit
+			var handleClear = function(e) {
+						if (e && (e.type === 'click' || (e.type === 'keydown' && (e.key === 'Enter' || e.key === ' ')))) {
+							e.preventDefault();
+							queryScreen.clearFacet('publication_year');
+							var formEl = Y.one('#'+queryScreen.selectedForm).one('form');
+							queryScreen.submitForm(formEl);
+						}
+			        };
+			var clickSub = clearBtn.on('click', handleClear);
+			var keydownSub = clearBtn.on('keydown', handleClear);
+			clearBtn.setData('clearHandlers', [clickSub, keydownSub]);
+		}
+	
+		var clearBtn = Y.one('#clear-subject_facet-facet');
+		if (clearBtn) {
+			var prevHandlers = clearBtn.getData('clearHandlers');
+			if (prevHandlers) {
+				Y.Array.each(prevHandlers, function (h) {
+					if (h && h.detach) {
+						h.detach();
+					}
+				});
+			}
+			// Define a single function to handle clear + submit
+			var handleClear = function(e) {
+						if (e && (e.type === 'click' || (e.type === 'keydown' && (e.key === 'Enter' || e.key === ' ')))) {
+							e.preventDefault();
+							queryScreen.clearFacet('subject_facet');
+							var formEl = Y.one('#'+queryScreen.selectedForm).one('form');
+							queryScreen.submitForm(formEl);
+						}
+			        };
+			var clickSub = clearBtn.on('click', handleClear);
+			var keydownSub = clearBtn.on('keydown', handleClear);
+			clearBtn.setData('clearHandlers', [clickSub, keydownSub]);
+		}
+	
+
+	} );
+});
+</script>
+<script type="text/javascript">var pageData = {"page":{"environment":"prod","productName":"bpdg","language":"en","name":"Search:query_screen","businessUnit":"els:rp:st"},"visitor":{}};</script>
+
+
+
+
+</head>
+<body class="legacy search">
+<!-- FILE /srv/sequoia/main/data/publications.iaa.org.il/assets/header.pregen --><!-- FILE: /srv/sequoia/main/data/assets/site/mobile_nav.inc --><!--[if !IE]>-->
+<script src="/assets/scripts/dc-mobile/dc-responsive-nav.js"></script>
+
+<header id="mobile-nav" class="nav-down device-fixed-height" style="visibility: hidden;">
+  
+  
+  <nav class="nav-collapse">
+    <ul>
+      <li class="menu-item active device-fixed-width"><a href="https://publications.iaa.org.il" title="Home" data-scroll >Home</a></li>
+      <li class="menu-item device-fixed-width"><a href="https://publications.iaa.org.il/do/search/advanced/" title="Search" data-scroll ><i class="icon-search"></i> Search</a></li>
+      <li class="menu-item device-fixed-width"><a href="https://publications.iaa.org.il/communities.html" title="Browse" data-scroll >Browse Collections</a></li>
+      <li class="menu-item device-fixed-width"><a href="/cgi/myaccount.cgi?context=" title="My Account" data-scroll >My Account</a></li>
+      <li class="menu-item device-fixed-width"><a href="https://publications.iaa.org.il/about.html" title="About" data-scroll >About</a></li>
+      <li class="menu-item device-fixed-width"><a href="https://network.bepress.com" title="Digital Commons Network" data-scroll ><img width="16" height="16" alt="DC Network" style="vertical-align:top;" src="/assets/md5images/8e240588cf8cd3a028768d4294acd7d3.png"> Digital Commons Network™</a></li>
+    </ul>
+  </nav>
+</header>
+
+<script src="/assets/scripts/dc-mobile/dc-mobile-nav.js"></script>
+<!--<![endif]-->
+<!-- FILE: /srv/sequoia/main/data/publications.iaa.org.il/assets/header.pregen (cont) -->
+
+
+
+<div id="iaa">
+	<div id="container">
+		<a href="#main" class="skiplink" accesskey="2" >Skip to main content</a>
+
+					
+			<div id="header" role="banner">
+				<a href="https://publications.iaa.org.il" id="banner_link" title="Israel Antiquities Authority Publications Portal" >
+					<img id="banner_image" alt="Israel Antiquities Authority Publications Portal" width='980' height='344' src="/assets/md5images/003d51b30b3ddeacebadf2c74251cf1d.png">
+				</a>	
+				
+					<a href="https://www.iaa.org.il/en/" id="logo_link" title="Israel Antiquities Authority" >
+						<img id="logo_image" alt="Israel Antiquities Authority" width='237' height='98' src="/assets/md5images/0a20b75dcf504bf850efb9d78776e3d5.png">
+					</a>	
+				
+			</div>
+					
+			<div id="navigation">
+				<!-- FILE: /srv/sequoia/main/data/assets/site/ir_navigation.inc --><div id="tabs" role="navigation" aria-label="Main"><ul><li id="tabone"><a href="https://publications.iaa.org.il" title="Home" ><span>Home</span></a></li><li id="tabtwo"><a href="https://publications.iaa.org.il/about.html" title="About" ><span>About</span></a></li><li id="tabthree"><a href="https://publications.iaa.org.il/faq.html" title="FAQ" ><span>FAQ</span></a></li><li id="tabfour"><a href="https://publications.iaa.org.il/cgi/myaccount.cgi?context=" title="My Account" ><span>My Account</span></a></li></ul></div>
+
+
+<!-- FILE: /srv/sequoia/main/data/publications.iaa.org.il/assets/header.pregen (cont) -->
+			</div>
+		
+
+		<div id="wrapper">
+			<div id="content">
+				<div id="main" class="text" role="main">
+
+<h1 class="visually-hidden">Search the repository</h1>
+
+<div id="template_query_data" value="Cohen"></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div id="global-alert" class="hidden info">
+</div>
+<div id="query-wrapper">
+
+	<div id="show-search-container" class="query tr">
+		<a href="#" id="show-search" class="hidden">Show Search</a>
+		<a href="#" id="hide-search" class="hidden">Hide Search</a>
+	</div>
+	<div id="basic-search">
+		<form id="basic-search-form" method="GET" action="/do/search/"> 
+			<fieldset class="query">
+				<legend>Search <a class="helplink" title="Help with Search" href="/help-search.html" aria-label="Help with Search"><span aria-hidden="true" class="icon-question-sign"></span></a></legend>
+				<label for="simple-search" class="visually-hidden">Enter search terms</label>
+				<span class="grid_7"><input name="q" id="simple-search" type="text" value="Cohen"></span>
+				<span class="grid_4">
+					<button type="submit" name="query" value="Search" id="do-search" class="white medium">Search</button>
+					<a href="#" id="switch-to-advanced">Advanced</a>
+				</span>
+				<div class="clear"></div>
+				<input type="hidden" name="start" class="start-input" value="0">
+				<input type="hidden" name="context" id="basic-context" value="37179664">
+				
+					<input type="hidden" name="facet" class="discipline-facet facet-hidden" value="">
+				
+					<input type="hidden" name="facet" class="download_type-facet facet-hidden" value="">
+				
+					<input type="hidden" name="facet" class="publication_facet-facet facet-hidden" value="">
+				
+					<input type="hidden" name="facet" class="publication_type-facet facet-hidden" value="">
+				
+					<input type="hidden" name="facet" class="publication_year-facet facet-hidden" value="">
+				
+					<input type="hidden" name="facet" class="subject_facet-facet facet-hidden" value="">
+				
+							</fieldset>
+		</form>
+	</div>
+
+	<div id="advanced-search" class="hidden">
+		<form method="GET" action="/do/search/">
+			<fieldset>
+				<legend>Advanced Search <a class="helplink" title="Help with Search" href="/help-search.html" aria-label="Help with Search"><span aria-hidden="true" class="icon-question-sign"></span></a></legend>
+				<label for="search-string" class="visually-hidden">Advanced Search Query</label>
+				<input type="hidden" name="start" class="start-input" value="0">
+				
+					<input type="hidden" name="facet" class="discipline-facet facet-hidden" value="">
+				
+					<input type="hidden" name="facet" class="download_type-facet facet-hidden" value="">
+				
+					<input type="hidden" name="facet" class="publication_facet-facet facet-hidden" value="">
+				
+					<input type="hidden" name="facet" class="publication_type-facet facet-hidden" value="">
+				
+					<input type="hidden" name="facet" class="publication_year-facet facet-hidden" value="">
+				
+					<input type="hidden" name="facet" class="subject_facet-facet facet-hidden" value="">
+				
+				
+				<div class="query">
+					<input type="text" name="q" id="search-string" class="grid_12 alpha omega" onFocus="return" readonly="readonly" value="Cohen">
+				</div>
+				<div class="clear"></div>
+					
+				<div class="query">
+					<div id="rows">			
+							
+					</div> <!-- end rows -->
+				</div>		
+			</fieldset>
+			<div class="query">
+				
+					<span class="grid_2 prefix_5"><label for="start-date">Date range:</label></span>
+<span class="grid_2">
+	<input type="text" id="start-date" name="start_date" placeholder="MM/DD/YYYY" value="">
+</span>
+<label for="end-date" class="visually-hidden">End Date:</label> 
+<span class="grid_2">
+	<input type="text" id="end-date" name="end_date" placeholder="MM/DD/YYYY" value="">
+</span>
+
+						
+				<div class="clear"></div>
+<p class="limit-search">
+		<label for="advanced-context" class="grid_2 prefix_5">
+			Limit search to:
+		</label>
+		<span class="grid_4">
+			<select name="context" id="advanced-context">
+				
+										<option value="37179664" selected="selected">Israel Antiquities Authority Publications Portal</option>
+									
+										<option value="1">All Repositories</option>
+												</select>
+	</span>
+</p>
+
+				<div class="clear"></div>
+<span role="group" aria-labelledby="sortby-grouplabel" class="sort-options">
+	<span id="sortby-grouplabel" class="grid_2 prefix_5">Sort by:</span>
+	<span class="grid_4">
+		<label for="sort-score">
+			<input type="radio" name="sort" id="sort-score" value="score" checked="checked"> Relevance
+		</label> 
+		<label for="sort-date">
+			<input type="radio" name="sort" id="sort-date" value="date_desc"> Publication Date
+		</label>
+	</span>
+</span>
+
+				<div class="clear"></div>
+<p class="pick-format">
+		<label for="results-format" class="grid_2 prefix_5">
+			Format:
+		</label>
+		<span class="grid_4">
+			<select name="format" id="results-format">
+								<option value="json">links</option>
+								<option value="refer">Bibliography Export</option>
+							</select>
+	</span>
+</p>
+
+				<div style="display:none;visibility:hidden;height:1px"><iframe id="export-frame" style="display:none;visibility:hidden;height:1px"></iframe></div>
+				<div class="clear"></div>
+				<div id="advanced-basic-search-switch">				
+					<button type="submit" value="Search" name="search" id="do-search-advanced" class="fr white medium">Search</button>
+					<a href="#" id="switch-to-basic">Basic</a>
+				</div>
+				<br class="clear" />
+			</div>
+			<div class="clear"></div>
+
+		</form>	
+	</div> <!-- advanced search -->
+</div><!-- query-wrapper -->
+
+<div id="query-results">
+
+<div class="query">
+<div class="grid_12" id="info-pane">
+<div id="results-header">
+		<div class="clear"></div>		
+	</div>
+<br class="clear" />
+</div>
+
+<div class="grid_3" id="facet-pane">
+
+	<p id="selected-facets">
+				<span id="selected-discipline-facet" class="hidden">
+			<a href="#" role="button" tabindex="0" class="close" id="clear-discipline-facet" aria-label="Clear filter Discipline"><i>&times;</i>
+			 <strong id="selected-discipline-facet-label"></strong></a>
+		</span>
+				<span id="selected-download_type-facet" class="hidden">
+			<a href="#" role="button" tabindex="0" class="close" id="clear-download_type-facet" aria-label="Clear filter File Type"><i>&times;</i>
+			 <strong id="selected-download_type-facet-label"></strong></a>
+		</span>
+				<span id="selected-publication_facet-facet" class="hidden">
+			<a href="#" role="button" tabindex="0" class="close" id="clear-publication_facet-facet" aria-label="Clear filter Publication"><i>&times;</i>
+			 <strong id="selected-publication_facet-facet-label"></strong></a>
+		</span>
+				<span id="selected-publication_type-facet" class="hidden">
+			<a href="#" role="button" tabindex="0" class="close" id="clear-publication_type-facet" aria-label="Clear filter Publication Type"><i>&times;</i>
+			 <strong id="selected-publication_type-facet-label"></strong></a>
+		</span>
+				<span id="selected-publication_year-facet" class="hidden">
+			<a href="#" role="button" tabindex="0" class="close" id="clear-publication_year-facet" aria-label="Clear filter Publication Year"><i>&times;</i>
+			 <strong id="selected-publication_year-facet-label"></strong></a>
+		</span>
+				<span id="selected-subject_facet-facet" class="hidden">
+			<a href="#" role="button" tabindex="0" class="close" id="clear-subject_facet-facet" aria-label="Clear filter Keyword"><i>&times;</i>
+			 <strong id="selected-subject_facet-facet-label"></strong></a>
+		</span>
+		
+	</p>
+<br class="clear" />
+	<div id="results-facets" class="hidden"></div>
+</div>
+<div class="grid_9" id="result-pane" role="region" aria-label="Search results">
+	<div id="results-list" role="list">
+		<div class="clear"></div>
+	</div>
+	<div id="results-footer"></div>
+</div>
+<br class="clear" />
+</div>
+
+<!-- FILE /srv/sequoia/main/data/assets/site/footer.pregen --></div>
+	<div class="verticalalign">&nbsp;</div>
+	<div class="clear">&nbsp;</div>
+
+</div>
+
+	<div id="sidebar" role="complementary">
+	<!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_7_8.inc -->
+
+	<!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_sort_sba.inc --><!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_custom_upper_7_8.inc -->
+
+<!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_sort_sba.inc (cont) -->
+<!-- FILE: /srv/sequoia/main/data/publications.iaa.org.il/assets/ir_sidebar_search_7_8.inc --><h2>Search</h2>
+
+
+	
+<form method='get' action='https://publications.iaa.org.il/do/search/' id="sidebar-search">
+	<label for="search" accesskey="4">
+		Enter search terms:
+	</label>
+		<div>
+			<span class="border">
+				<input type="text" name='q' class="search" id="search">
+			</span> 
+			<input type="submit" value="Search" class="searchbutton" style="font-size:11px;">
+		</div>
+	<label for="context" style="display:none;">
+		Select context to search:
+	</label> 
+		<div>
+			<span class="border">
+				<select name="fq" id="context">
+
+					<option value='virtual_ancestor_link:"https://publications.iaa.org.il"'>in this repository</option>
+				
+					
+					
+					
+					<option value='virtual_ancestor_link:"http:/"'>across all repositories</option>
+
+				</select>
+			</span>
+		</div>
+</form>
+
+
+<p class="advanced">
+	
+	
+		<a href="https://publications.iaa.org.il/do/search/advanced/?fq=virtual_ancestor_link:%22https://publications.iaa.org.il%22" >
+			Advanced Search
+		</a>
+	
+</p><!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_sort_sba.inc (cont) -->
+<!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_notify_7_8.inc -->
+	<ul id="side-notify">
+		<li class="notify">
+			<a href="https://publications.iaa.org.il/announcements.html" title="Email or RSS Notifications" >
+				Notify me via email or <acronym title="Really Simple Syndication">RSS</acronym>
+			</a>
+		</li>
+	</ul>
+
+
+
+
+
+<!-- FILE: /srv/sequoia/main/data/assets/site/urc_badge.inc -->
+
+
+
+
+
+
+<!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_notify_7_8.inc (cont) -->
+
+<!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_sort_sba.inc (cont) -->
+<!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_custom_middle_7_8.inc --><!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_sort_sba.inc (cont) -->
+<!-- FILE: /srv/sequoia/main/data/publications.iaa.org.il/assets/ir_sidebar_browse.inc --><h2>Browse</h2>
+<ul id="side-browse">
+
+
+<li class="collections"><a href="https://publications.iaa.org.il/communities.html" title="Browse by Collections" >Collections</a></li>
+<li class="journals"><a href="https://publications.iaa.org.il/peer_review_list.html" title="Journals" >Journals</a></li>
+<li class="books"><a href="https://publications.iaa.org.il/iaabookseries/" title="Books" >Books</a></li>
+
+
+
+</ul>
+<!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_sort_sba.inc (cont) -->
+<!-- FILE: /srv/sequoia/main/data/publications.iaa.org.il/assets/ir_sidebar_author_7_8.inc --><h2>Author Corner</h2>
+
+
+
+
+	<ul id="side-author">
+		<li class="faq">
+			<a href="https://publications.iaa.org.il/faq.html" title="Author FAQ" >
+				Author FAQ
+			</a>
+		</li>
+		
+		</li>
+	</ul>
+
+
+
+
+<!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_sort_sba.inc (cont) -->
+<!-- FILE: /srv/sequoia/main/data/publications.iaa.org.il/assets/ir_sidebar_custom_lower_7_8.inc --><!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_homepage_links_7_8.inc -->
+
+<!-- FILE: /srv/sequoia/main/data/publications.iaa.org.il/assets/ir_sidebar_custom_lower_7_8.inc (cont) -->
+	
+
+
+
+<div id="sb-custom-lower">
+	<h2 class="sb-custom-title">Links</h2>
+		<ul class="sb-custom-ul">
+			<li class="sb-custom-li">
+				<a href="https://www.iaa.org.il/en/" target="_blank" >
+					Israel Antiquities Authority Website
+				</a>
+			</li>
+			<li class="sb-custom-li">
+				<a href="https://icc-iaa.primo.exlibrisgroup.com/discovery/search?vid=972ICC_IAA:972ICC_IAA&lang=en" target="_blank" >
+					Israel Antiquities Authority Library
+				</a>
+			</li>
+		</ul>
+</div>
+
+
+<!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_sort_sba.inc (cont) -->
+<!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_sw_links_7_8.inc -->
+	
+
+
+
+	<!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_sort_sba.inc (cont) -->
+
+<!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_geolocate.inc --><!-- FILE: /srv/sequoia/main/data/assets/site/ir_geolocate_enabled_and_displayed.inc -->
+
+<!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_geolocate.inc (cont) -->
+
+<!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_sort_sba.inc (cont) -->
+<!-- FILE: /srv/sequoia/main/data/publications.iaa.org.il/assets/ir_sidebar_custom_lowest_7_8.inc -->
+
+
+
+<ul id="social">
+    <li><a href="https://www.instagram.com/antiquities_il/" target="_blank" ><img class="socialicon" id="facebook-icon" alt="Instagram" width='36' height='36' src="/assets/md5images/9d6e7a7c8fec97b3afb4fe8d84bcdc23.gif"></a></li>
+    <li><a href="https://twitter.com/antiquitiesil" target="_blank" ><img class="socialicon" id="twitter-icon" alt="Twitter" width='36' height='36' src="/assets/md5images/37732bacc728b3ee19e1cb3de04d6a4b.gif"></a></li>
+    <li><a href="https://www.youtube.com/channel/UCVIIE7UK7W5Uri0V2Vn2Bgg" target="_blank" ><img class="socialicon" id="youtube-icon" alt="YouTube" width='44' height='35' src="/assets/md5images/71f7d400455e895516dbddf66b6bff7d.gif"></a></li>
+    <li><a href="https://www.facebook.com/AntiquitiesIL/" target="_blank" ><img class="socialicon" id="youtube-icon" alt="Facebook" width='36' height='36' src="/assets/md5images/5fca0093f255dc1df9657f1c3b1280dc.gif"></a></li>
+    <li><a href="https://www.tiktok.com/@antiquitiesauthority_il" target="_blank" ><img class="socialicon" id="youtube-icon" alt="Tiktok" width='36' height='36' src="/assets/md5images/cfbf34038a7d22f51f8eeff790d6c16b.gif"></a></li>
+</ul><!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_sort_sba.inc (cont) -->
+<!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_7_8.inc (cont) -->
+
+		
+
+
+
+
+<!-- FILE: /srv/sequoia/main/data/assets/site/portal_badge.inc -->
+
+
+
+
+
+
+
+
+
+
+
+<!-- FILE: /srv/sequoia/main/data/assets/site/ir_sidebar_7_8.inc (cont) -->
+<!-- FILE: /srv/sequoia/main/data/assets/site/footer.pregen (cont) -->
+	<div class="verticalalign">&nbsp;</div>
+	</div>
+
+</div>
+
+<!-- FILE: /srv/sequoia/main/data/publications.iaa.org.il/assets/ir_footer_content.inc --><div id="footer" role="contentinfo">
+    
+    
+    <!-- FILE: /srv/sequoia/main/data/assets/site/ir_bepress_logo.inc --><div id="bepress">
+
+<a href="https://www.elsevier.com/solutions/digital-commons" title="Elsevier - Digital Commons" >
+	<em>Elsevier - Digital Commons</em>
+</a>
+
+</div>
+<!-- FILE: /srv/sequoia/main/data/publications.iaa.org.il/assets/ir_footer_content.inc (cont) -->
+    <p>
+        <a href="https://publications.iaa.org.il" title="Home page" accesskey="1" >Home</a> |
+        <a href="https://publications.iaa.org.il/about.html" title="About" >About</a> |
+        <a href="https://publications.iaa.org.il/faq.html" title="FAQ" >FAQ</a> |
+        <a href="/cgi/myaccount.cgi?context=" title="My Account Page" accesskey="3" >My Account</a> |
+        <a href="https://publications.iaa.org.il/accessibility.html" title="Accessibility Statement" accesskey="0" >Accessibility Statement</a>
+    </p>
+    <p>
+    
+    
+        <a class="secondary-link" href="https://www.elsevier.com/legal/privacy-policy" title="Privacy Policy" >Privacy</a>
+    
+        <a class="secondary-link" href="https://www.elsevier.com/legal/elsevier-website-terms-and-conditions" title="Copyright Policy" >Copyright</a>  
+    </p>
+    
+    <a href="https://www.iaa.org.il/en/" id="footer-logo-link" ><img id="footerlogo" alt="Israel Antiquities Authority" width='146' height='76' src="/assets/md5images/34c05a5710ad8a2baaadc7066e0b415f.gif"></a>
+</div><!-- FILE: /srv/sequoia/main/data/assets/site/footer.pregen (cont) -->
+
+</div>
+</div>
+
+<!-- FILE: /srv/sequoia/main/data/publications.iaa.org.il/assets/ir_analytics.inc -->
+<!-- Google tag (gtag.js) --> 
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-EL9EZD5F69"></script> <script> window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-EL9EZD5F69'); </script><!-- FILE: /srv/sequoia/main/data/assets/site/footer.pregen (cont) -->
+
+<script type='text/javascript' src='/assets/scripts/bpbootstrap-20160726.pack.js'></script><script type='text/javascript'>BPBootstrap.init({appendCookie:''})</script></body></html>

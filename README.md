@@ -11,7 +11,7 @@ Vertical MCP server for the **DAO** domain (Digital Antiquity Oldenburg) — Lev
 | Tool | Source | Status |
 |---|---|---|
 | `search_zenon` | Zenon DAI (~1M records, multilingual DE/EN/FR/IT/HE/AR) | implemented |
-| `search_iaa` | IAA Publications (Reports, ʿAtiqot, HA-ESI) | implemented |
+| `search_iaa` | IAA Publications (Reports, ʿAtiqot, HA-ESI) | MVP-incomplete (see below) |
 | `search_adaj` | ADAJ — Annual of the Department of Antiquities of Jordan | implemented |
 | `resolve_author` | Wikidata SPARQL + local override list + GND fallback | implemented |
 
@@ -88,6 +88,20 @@ uv run pytest -v
 ```
 
 The verification suite (`tests/test_verification_suite.py`) contains five **frozen reference fingerprints** drawn from the 2026-05-15 Negev-fortress test. One of them is a **negative test** — a hallucinated reference (Ben-Ami 2026 Levant 58(1):25–42) that converged across three LLM outputs. The suite asserts the server returns no result for this query; a false positive would mean the server is echoing the LLM hallucination.
+
+## Known limitations
+
+### `search_iaa` is MVP-incomplete
+
+Probed 2026-05-15: ``publications.iaa.org.il`` runs Berkeley Electronic Press (Digital Commons). The search endpoint at ``/do/search/?q=<q>`` returns an HTML shell where ``<div id="results-list">`` is empty — actual hits arrive client-side via a Solr JS bundle. The backend also returns HTTP 504 intermittently on the search path.
+
+Per the briefing (Abschnitt XIII.2), playwright/headless-browser fallback is out of scope for the MVP. The adapter therefore:
+
+- Still issues the real GET against ``/do/search/?q=<q>``.
+- Parses the BePress server-rendered markup as it *should* appear (so that the moment SSR is restored or a real API ships, results flow through transparently).
+- Raises ``IAAUnavailableError`` with an actionable message when ``#results-list`` is empty or absent — the explicit anti-silent-failure tripwire from architecture principle #6.
+
+Workaround until SSR returns: cross-check IAA queries via ``search_zenon`` — Zenon DAI partially indexes IAA publications.
 
 ## Disclaimer
 

@@ -11,6 +11,7 @@ import sys
 
 from mcp.server.fastmcp import FastMCP
 
+from .adapters import iaa as _iaa
 from .adapters import zenon as _zenon
 
 logging.basicConfig(
@@ -35,6 +36,7 @@ async def ping() -> str:
 
 
 _zenon.register(mcp)
+_iaa.register(mcp)
 
 
 def main() -> None:
