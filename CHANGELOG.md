@@ -8,6 +8,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `inline_citation` block on every `DAOPaper`: pre-rendered Markdown with
+  three variants (`markdown_authoryear` / `markdown_domain` /
+  `markdown_domain_title`) plus a `markdown_recommended` first-choice
+  string. Builder picks the recommended variant heuristically and
+  pre-applies the ⚠️-prefix when `audit.warn_marker` or
+  `audit.aggregator` is set. Agent copies the string verbatim — output
+  shape now structurally enforces the AGENTS.md inline-link rule
+  instead of relying on prompt-side guidance.
+- `Identifiers` and `Audit` Pydantic models on `DAOPaper` (additive,
+  coexist with the legacy `doi_or_id` prefixed string). `Identifiers`
+  exposes structured `doi` / `openalex_id` / `zenon_id` / `iaa_pub_id`
+  / `adaj_id`; `Audit` exposes `primary_source` / `aggregator` /
+  `verification_note` / `warn_marker`.
+- Zenon adapter extracts external DOIs from `record["urls"]` and
+  `record["DOI"]`; IAA adapter scans block text for DOI patterns;
+  ADAJ adapter sets `audit.warn_marker` when `verification_note` fires
+  (e.g. `publication_type` mismatch).
+- 17 new unit tests in `tests/test_inline_citation.py` covering the
+  source-priority table, three Markdown variants, aggregator handling,
+  ≥3-author et-al form, ≤50-char title truncation with single-character
+  ellipsis, and the ⚠️-prefix gating rules.
+- Tool docstrings on `search_zenon` / `search_iaa` / `search_adaj` and
+  the `DAOPaper` model now explicitly instruct the agent to copy
+  `inline_citation.markdown_recommended` verbatim — discoverability
+  fix so the new field actually gets used.
+
+### Added (earlier in this Unreleased block)
 - `resolve_site` MCP tool against `iDAI.gazetteer`
   (`gazetteer.dainst.org`). Returns canonical name, gazId, multilingual
   name variants, types, coordinates, parent/ancestor hierarchy, and

@@ -1,6 +1,6 @@
 # dao-paper-search-mcp
 
-Vertical MCP server for the **DAO** domain (Digital Antiquity Oldenburg) — Levant archaeology, biblical archaeology, Bronze/Iron Age. Complementary to [`paper-search-mcp`](https://github.com/yourusername/paper-search-mcp), not a replacement.
+Vertical MCP server for the **DAO** domain (Digital Antiquity Oldenburg) — Levant archaeology, biblical archaeology, Bronze/Iron Age. Complementary to [`paper-search-mcp`](https://github.com/openags/paper-search-mcp), not a replacement.
 
 `paper-search-mcp` covers ~20 horizontal scholarly platforms (Crossref, OpenAlex, Semantic Scholar, arXiv, …). It does **not** cover Zenon DAI, IAA Publications, ADAJ, IxTheo, Propylaeum — the German/Hebrew/Arabic-language sources that are the DAO core domain. This server fills that gap.
 
@@ -65,6 +65,32 @@ Then update `~/.config/opencode/agent/research.md` to route Levant/IAA/DoA-Jorda
 - **Schema fidelity.** All search tools return the same Pydantic model (`DAOPaper`).
 - **Structured verification notes.** When uncertain, the adapter sets `verification_note`, never guesses.
 - **Stdio cleanliness.** MCP stdout is reserved for JSON-RPC; all logging goes to stderr.
+- **Output-shape lock-in for citations.** Every hit carries an `inline_citation` block whose `markdown_recommended` field is a pre-rendered Markdown link (with `⚠️`-prefix when `audit.warn_marker` is set). The agent copies this verbatim instead of formatting citations itself — structural enforcement of the `AGENTS.md` inline-link rule. Multiple variants are exposed so the agent can pick the form that fits its prose.
+
+## Inline citations
+
+Each `DAOPaper` carries three blocks the agent should consume directly:
+
+- `identifiers`: structured DOI / Zenon / IAA / ADAJ IDs (coexists with the legacy `doi_or_id` string).
+- `audit`: `primary_source`, `aggregator`, `verification_note`, `warn_marker` — flags that drive the citation renderer.
+- `inline_citation`: pre-rendered Markdown plus the labels used to build it.
+
+### `inline_citation` fields
+
+| Field | Purpose |
+|---|---|
+| `primary_url` | Canonical URL (priority: DOI > OpenAlex > Zenon > IAA > ADAJ > open_access_url > landing_page_url). |
+| `display_domain` | Display domain (`www.` stripped). |
+| `display_label_authoryear` | `"Cohen 1979"`, `"Cohen & Yisrael 1995"`, `"Cohen et al. 1979"` — `None` when author or year is missing. |
+| `display_label_domain` | Same as `display_domain`. |
+| `display_label_domain_title` | `"doi.org — Title fragment…"` — truncated to ~50 chars. |
+| `markdown_authoryear` | `[(Cohen 1979)](url)` — Author-Year link form for academic body text. |
+| `markdown_domain` | `[(doi.org)](url)` — domain-only form for compact footnotes. |
+| `markdown_domain_title` | `[(doi.org — Title…)](url)` — domain-plus-title for web references. |
+| `markdown_recommended` | The agent's first-choice variant, with `⚠️`-prefix pre-applied when `audit.warn_marker` is set. **Copy this verbatim.** |
+| `fallback_text` | `"Cohen 1979: 61–79"` — used when no `primary_url` exists (print-only). |
+
+**`markdown_recommended` heuristic:** Author-Year form when both authors and year are available (the academic case); Domain-Title form when no Author-Year context exists (the web-hit case); Domain-only as last resort; `fallback_text` when no link target exists. The agent is free to pick a different variant if it fits the surrounding prose better.
 
 ## Authority overrides
 
