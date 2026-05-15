@@ -152,6 +152,11 @@ def _pick_primary_url(
         # landing is canonical when no DOI is registered, even though
         # the underlying source is some institutional repo.
         return f"https://core.ac.uk/works/{identifiers.core_id}"
+    if identifiers.europepmc_id:
+        # Europe PMC landing — used as last-resort anchor for preprints
+        # that haven't been Crossref-registered yet (rare; most bioRxiv
+        # preprints have a DOI from day one).
+        return f"https://europepmc.org/article/PPR/{identifiers.europepmc_id}"
     if open_access_url:
         return str(open_access_url)
     if landing_page_url:

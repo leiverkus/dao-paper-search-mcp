@@ -13,6 +13,7 @@ from mcp.server.fastmcp import FastMCP
 
 from .adapters import adaj as _adaj
 from .adapters import arxiv as _arxiv
+from .adapters import biorxiv as _biorxiv
 from .adapters import core as _core
 from .adapters import crossref as _crossref
 from .adapters import iaa as _iaa
@@ -53,6 +54,7 @@ _semantic_scholar.register(mcp)
 _arxiv.register(mcp)
 _core.register(mcp)
 _zenodo.register(mcp)
+_biorxiv.register(mcp)
 _author.register(mcp)
 _gazetteer.register(mcp)
 
