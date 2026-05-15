@@ -210,31 +210,99 @@ async def _query_wikidata(
 
 # --- GND fallback ---------------------------------------------------------
 
+# When domain_hint is set, we drop GND hits whose entire profession list
+# is on this blacklist. Saves us from returning a 19th-century rabbi
+# (Chafetz Chaim, GND 119150530) for "Yisrael Cohen, archaeology" —
+# observed regression 2026-05-15.
+_OFF_DOMAIN_PROFESSIONS_BY_HINT: dict[str, frozenset[str]] = {
+    "archaeology": frozenset(
+        {
+            "rabbiner", "rabbi",
+            "theologe", "theologin", "theologian",
+            "pfarrer", "pastor",
+            "mediziner", "arzt", "physician",
+            "jurist", "rechtsanwalt", "lawyer",
+            "komponist", "musiker", "musician",
+            "schauspieler", "actor",
+            "politiker", "politician",
+            "kaufmann", "merchant",
+        }
+    ),
+}
 
-async def _query_gnd(name: str, client: httpx.AsyncClient) -> list[ResolvedAuthor]:
-    """Lobid.org wraps the GND with a clean JSON API. We restrict to
-    persons (type=Person) and pick the top hit."""
+
+def _gnd_query_with_hint(name: str, domain_hint: Optional[str]) -> str:
+    """Bias lobid's relevance ranking by appending a German domain keyword.
+    ``archaeology`` → ``Archäologie``; other hints pass through verbatim."""
+    if not domain_hint:
+        return name
+    canonical = {"archaeology": "Archäologie"}.get(domain_hint.lower(), domain_hint)
+    return f"{name} {canonical}"
+
+
+def _gnd_record_passes_domain(record: dict[str, Any], domain_hint: Optional[str]) -> bool:
+    """Drop GND hits whose only profession is on the off-domain blacklist
+    for this hint. Records with no profession data are kept (we have no
+    grounds to reject them)."""
+    if not domain_hint:
+        return True
+    blacklist = _OFF_DOMAIN_PROFESSIONS_BY_HINT.get(domain_hint.lower())
+    if not blacklist:
+        return True
+    professions = record.get("professionOrOccupation") or []
+    if not professions:
+        return True
+    labels = {str(p.get("label", "")).lower().strip() for p in professions if isinstance(p, dict)}
+    labels.discard("")
+    if not labels:
+        return True
+    # Pass if any label is NOT on the blacklist (= at least one plausible
+    # profession). Drop only when every label is off-topic.
+    return not labels.issubset(blacklist)
+
+
+async def _query_gnd(
+    name: str,
+    domain_hint: Optional[str],
+    client: httpx.AsyncClient,
+) -> list[ResolvedAuthor]:
+    """Lobid.org wraps the GND with a clean JSON API. Restricted to
+    persons (type=Person), biased by ``domain_hint``, and post-filtered
+    so off-topic professions don't leak through.
+
+    Returns an empty list when no surviving candidate matches the hint;
+    the caller must then decide between escalation and giving up."""
     r = await client.get(
         GND_LOOKUP,
-        params={"q": name, "filter": "type:Person", "format": "json", "size": 5},
+        params={
+            "q": _gnd_query_with_hint(name, domain_hint),
+            "filter": "type:Person",
+            "format": "json",
+            "size": 5,
+        },
         headers={"User-Agent": _user_agent()},
         timeout=HTTP_TIMEOUT,
     )
     r.raise_for_status()
     payload = r.json()
     members = payload.get("member") or []
-    out: list[ResolvedAuthor] = []
-    for m in members[:1]:  # only the top hit; the API is already relevance-sorted
-        out.append(
-            ResolvedAuthor(
-                name_canonical=m.get("preferredName") or name,
-                name_variants=list(m.get("variantName") or []),
-                gnd_id=m.get("gndIdentifier"),
-                source="gnd",
-                verification_note="Resolved via GND fallback; verify domain match.",
-            )
+    filtered = [m for m in members if _gnd_record_passes_domain(m, domain_hint)]
+    if not filtered:
+        return []
+    top = filtered[0]
+    professions = [str(p.get("label", "")) for p in (top.get("professionOrOccupation") or []) if isinstance(p, dict)]
+    note = "Resolved via GND fallback; verify domain match."
+    if professions:
+        note += f" GND profession: {', '.join(professions)}."
+    return [
+        ResolvedAuthor(
+            name_canonical=top.get("preferredName") or name,
+            name_variants=list(top.get("variantName") or [])[:10],
+            gnd_id=top.get("gndIdentifier"),
+            source="gnd",
+            verification_note=note,
         )
-    return out
+    ]
 
 
 # --- public entry point ---------------------------------------------------
@@ -270,7 +338,7 @@ async def resolve_author_impl(
             return primary
         # Wikidata empty -> try GND.
         try:
-            gnd = await _query_gnd(name_string, c)
+            gnd = await _query_gnd(name_string, domain_hint, c)
         except httpx.HTTPError as e:
             log.warning("gnd error: %s", e)
             gnd = []

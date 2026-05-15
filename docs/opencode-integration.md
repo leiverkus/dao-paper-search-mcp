@@ -41,8 +41,8 @@ In the `## Werkzeuge & wann du sie nutzt` section, replace the existing
 
 ```markdown
 - **dao-paper-search-mcp** — DAO-Spezialquellen (Zenon DAI, IAA Publications,
-  ADAJ + SHAJ + Munjazat + JERD + Athar) + Wikidata-Author-Disambiguation.
-  **Erste Wahl** bei:
+  ADAJ + SHAJ + Munjazat + JERD + Athar) + Wikidata-Author-Disambiguation
+  + iDAI.gazetteer-Site-Resolver. **Erste Wahl** bei:
     - Levante-Archäologie (Iron Age, Bronze Age, biblische Archäologie)
     - Deutsch-/Hebräisch-/Arabisch-sprachige Forschung
     - IAA-, DoA-Jordan-, und DAI-Grabungsberichten
@@ -50,8 +50,22 @@ In the `## Werkzeuge & wann du sie nutzt` section, replace the existing
     - Site-Disambiguation und stabile Anker-IDs via iDAI.gazetteer → `resolve_site`
   Output enthält `verification_note` bei unsicheren Treffern. Zenon-Treffer haben
   `site_ids` mit `gazetteer:<gazId>`-Tokens, sobald DAI die Site cross-linkt.
-  `search_iaa` ist aktuell **MVP-incomplete** (IAA-Backend ist JS-only) —
-  bei `IAAUnavailableError` über `search_zenon` quer-checken.
+
+  **Cross-DB-Routing (wichtig):**
+    - Wenn `search_adaj` leer für eine Levante-Anfrage → **immer** `search_zenon` quer-checken.
+      Beispiel: „Cohen Yisrael Edom" → ADAJ leer, Zenon hat den Israel-Museum-Katalog.
+      Begründung: DoA-Jordan deckt nur die Jordan-Seite; Israel-Seite (Cohen/Yisrael
+      via IAA-Excavations) ist in Zenon teilindexiert, aber nicht in ADAJ.
+    - Wenn `search_iaa` mit `IAAUnavailableError` fehlschlägt → `search_zenon` als
+      Cross-Check (IAA-Backend ist JS-only, MVP-incomplete).
+    - Wenn `resolve_author` mit `source: "unresolved"` zurückkommt → das ist ein
+      *positives* Signal: Wikidata/GND haben keinen passenden Archäologen-Namensvariant
+      → wahrscheinlich falsche Schreibweise oder Halluzination. **Nicht** ignorieren.
+
+  **Multi-Autor-Heuristik:**
+    - „Cohen Yisrael" ist nicht eine Person „Yisrael Cohen", sondern wahrscheinlich
+      Co-Autoren-Stil „R. Cohen and Y. Yisrael" (klassische Negev-Fortresses-Refs).
+      `resolve_author` einzeln pro Nachname aufrufen, nicht über den ganzen String.
 ```
 
 The cross-validation discipline in `## Verifikations-Disziplin` then

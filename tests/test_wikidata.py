@@ -21,6 +21,8 @@ from dao_paper_search_mcp.resolvers.wikidata_author import (
     GND_LOOKUP,
     WIKIDATA_SPARQL,
     _binding_to_author,
+    _gnd_query_with_hint,
+    _gnd_record_passes_domain,
     _load_overrides,
     _normalise,
     _override_match,
@@ -29,6 +31,20 @@ from dao_paper_search_mcp.resolvers.wikidata_author import (
     _year_from_date,
     resolve_author_impl,
 )
+
+# Real lobid response observed 2026-05-15 for "Yisrael Cohen" — the
+# rabbi Chafetz Chaim. Pinned here as a regression fixture so the
+# domain filter is forever guarded against this specific leak.
+CHAFETZ_CHAIM_GND_RECORD = {
+    "preferredName": "Kahan, Israel M.",
+    "gndIdentifier": "119150530",
+    "variantName": ["Chafetz Chaim", "Hafets Hayim", "Hofets Hayim"],
+    "professionOrOccupation": [
+        {"id": "https://d-nb.info/gnd/4176751-2", "label": "Rabbiner"}
+    ],
+    "dateOfBirth": ["1838"],
+    "dateOfDeath": ["1933"],
+}
 
 
 def test_normalise_strips_punctuation_and_case() -> None:
@@ -173,6 +189,90 @@ async def test_resolve_author_impl_wikidata_single_hit() -> None:
     assert result.source == "wikidata"
     assert result.name_canonical == "Test Person"
     assert result.q_id == "Q12345"
+
+
+def test_gnd_query_appends_german_archaeology_term() -> None:
+    assert _gnd_query_with_hint("Yisrael Cohen", "archaeology") == "Yisrael Cohen Archäologie"
+    assert _gnd_query_with_hint("Müller", "archaeology") == "Müller Archäologie"
+
+
+def test_gnd_query_passes_other_hints_verbatim() -> None:
+    assert _gnd_query_with_hint("Müller", "biblical studies") == "Müller biblical studies"
+    assert _gnd_query_with_hint("Müller", None) == "Müller"
+    assert _gnd_query_with_hint("Müller", "") == "Müller"
+
+
+def test_gnd_record_passes_domain_drops_pure_rabbi() -> None:
+    """Regression: the 2026-05-15 'Yisrael Cohen' query returned Chafetz
+    Chaim (Rabbiner) from GND because the previous fallback ignored
+    domain_hint. This must never happen again for archaeology queries."""
+    assert _gnd_record_passes_domain(CHAFETZ_CHAIM_GND_RECORD, "archaeology") is False
+
+
+def test_gnd_record_passes_domain_keeps_archaeologist() -> None:
+    record = {"professionOrOccupation": [{"label": "Archäologin"}]}
+    assert _gnd_record_passes_domain(record, "archaeology") is True
+
+
+def test_gnd_record_passes_domain_keeps_mixed_profession() -> None:
+    """If at least one profession is plausible, the record is kept —
+    Cohen-the-rabbi-and-also-archaeologist is real enough to allow."""
+    record = {"professionOrOccupation": [{"label": "Rabbiner"}, {"label": "Archäologe"}]}
+    assert _gnd_record_passes_domain(record, "archaeology") is True
+
+
+def test_gnd_record_passes_domain_keeps_unknown_profession_when_no_data() -> None:
+    """Records without profession data are kept — we have no grounds to
+    reject them, and over-aggressive filtering would drop real hits."""
+    assert _gnd_record_passes_domain({}, "archaeology") is True
+    assert _gnd_record_passes_domain({"professionOrOccupation": []}, "archaeology") is True
+
+
+def test_gnd_record_passes_domain_no_filter_without_hint() -> None:
+    """When no domain_hint is supplied, the filter is a no-op."""
+    assert _gnd_record_passes_domain(CHAFETZ_CHAIM_GND_RECORD, None) is True
+    assert _gnd_record_passes_domain(CHAFETZ_CHAIM_GND_RECORD, "") is True
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_resolve_author_impl_does_not_leak_chafetz_chaim_for_archaeology() -> None:
+    """End-to-end regression: 'Yisrael Cohen' with default domain_hint
+    must NOT resolve to Chafetz Chaim. Either no result or a flagged
+    one is acceptable; the rabbi himself is not."""
+    respx.get(WIKIDATA_SPARQL).mock(
+        return_value=httpx.Response(200, json={"results": {"bindings": []}})
+    )
+    respx.get(GND_LOOKUP).mock(
+        return_value=httpx.Response(200, json={"member": [CHAFETZ_CHAIM_GND_RECORD]})
+    )
+    result = await resolve_author_impl("Yisrael Cohen", domain_hint="archaeology")
+    assert result.gnd_id != "119150530"
+    assert result.source == "unresolved"
+    assert result.verification_note is not None
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_resolve_author_impl_returns_gnd_with_profession_in_note() -> None:
+    """When a non-blacklisted GND hit comes through, the note should
+    surface the profession label so the agent can audit the match."""
+    respx.get(WIKIDATA_SPARQL).mock(
+        return_value=httpx.Response(200, json={"results": {"bindings": []}})
+    )
+    archaeologist_record = {
+        "preferredName": "Müller, Hans",
+        "gndIdentifier": "123456789",
+        "professionOrOccupation": [{"label": "Archäologe"}],
+    }
+    respx.get(GND_LOOKUP).mock(
+        return_value=httpx.Response(200, json={"member": [archaeologist_record]})
+    )
+    result = await resolve_author_impl("Hans Müller", domain_hint="archaeology")
+    assert result.source == "gnd"
+    assert result.gnd_id == "123456789"
+    assert result.verification_note is not None
+    assert "Archäologe" in result.verification_note
 
 
 @pytest.mark.asyncio
