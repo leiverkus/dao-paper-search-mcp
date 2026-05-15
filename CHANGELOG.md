@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-05-15
+
+The IAA-MVP-incomplete asterisk is gone. `search_iaa` now talks
+OAI-PMH to `publications.iaa.org.il/do/oai/` instead of trying to
+scrape a JS-rendered search HTML, and every IAA record carries a
+DataCite DOI (prefix `10.70967/`) so inline citations get the
+Author-Year form against `doi.org` for free.
+
+### Changed
+- **`search_iaa` reimplemented on OAI-PMH.** Server-side filtering by
+  collection (`atiqot` / `ha-esi` / `ha-hebrew` / `esi-english` /
+  `iaa-books` / `favissa` / `cornerstone` / `ha-esi-bilingual`) and
+  year range; client-side AND-of-tokens keyword matching against
+  title + description + subject + authors. Paginates via OAI
+  `resumptionToken` up to a 20-page safety cap (~2000 records).
+  21 unit tests in `tests/test_iaa.py`. See
+  `docs/2026-05-15-iaa-solr-probe.md` for the full sondierungsbericht.
+- **`IAAUnavailableError` removed.** The HTML-empty-`#results-list`
+  tripwire is obsolete now that OAI-PMH provides a clean structured
+  endpoint. Callers that handled the exception type can drop it.
+- **`search_iaa` argument `report_type` renamed to `collection`** with
+  expanded vocabulary covering all eight IAA-Publications collections
+  (was three: `report` / `atiqot` / `ha-esi`). Raw OAI setSpec
+  passthrough also supported.
+- Verification suite's `iaa_carmi_segal_2007` fingerprint now uses
+  the new `collection`/`year_from`/`year_to` signature; xfail still
+  honoured pending live-probe confirmation, will flip to expected
+  pass after the daily-driver run.
+- Removed the obsolete HTML fixtures
+  `tests/fixtures/iaa_search_empty.html` and
+  `tests/fixtures/iaa_search_with_results.html`.
+
+### Added
+- `docs/2026-05-15-iaa-solr-probe.md` — sondierungsbericht documenting
+  the dead `/do/search/results/json` route (stale 2019 JS bundle),
+  the OAI-PMH endpoint discovery, and the implementation plan that
+  drove this release.
+
 ## [0.4.0] - 2026-05-15
 
 First tagged release. Captures the initial MVP (Zenon/IAA/ADAJ +
@@ -180,5 +218,6 @@ most relevant to DAO/Digital-Humanities research.
   upstream SSR is restored or a playwright fallback is added post-MVP.
   See README "Known limitations".
 
-[Unreleased]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.5.0
 [0.4.0]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.4.0

@@ -11,7 +11,7 @@ The DAO-specific sources (Zenon DAI, IAA Publications, ADAJ) are the original ra
 | Tool | Source | Status |
 |---|---|---|
 | `search_zenon` | Zenon DAI (~1M records, multilingual DE/EN/FR/IT/HE/AR) | implemented |
-| `search_iaa` | IAA Publications (Reports, ʿAtiqot, HA-ESI) | MVP-incomplete (see below) |
+| `search_iaa` | IAA Publications (ʿAtiqot, HA-ESI, IAA Book Series, Favissa, …) | implemented (OAI-PMH backend since v0.5.0) |
 | `search_adaj` | DoA Publication Archive (ADAJ, SHAJ, Munjazat, JERD, Athar) | implemented |
 | `resolve_author` | Wikidata SPARQL + local override list + GND fallback | implemented |
 | `resolve_site` | iDAI.gazetteer (DAI's authoritative place register) | implemented |
@@ -130,17 +130,11 @@ The verification suite (`tests/test_verification_suite.py`) contains five **froz
 
 ## Known limitations
 
-### `search_iaa` is MVP-incomplete
+### `search_iaa` has no full-text search
 
-Probed 2026-05-15: ``publications.iaa.org.il`` runs Berkeley Electronic Press (Digital Commons). The search endpoint at ``/do/search/?q=<q>`` returns an HTML shell where ``<div id="results-list">`` is empty — actual hits arrive client-side via a Solr JS bundle. The backend also returns HTTP 504 intermittently on the search path.
+The IAA backend (BePress/Solr) does not expose a public free-text search API. The v0.5.0 OAI-PMH-backed adapter compensates by AND-matching query tokens against title + description + subject + author fields client-side — broad enough for most archaeology queries, but not as deep as a real Solr `q=` would be. Recommendation: always pass at least a 5-year `year_from`/`year_to` window so the OAI listing stays manageable.
 
-Per the briefing (Abschnitt XIII.2), playwright/headless-browser fallback is out of scope for the MVP. The adapter therefore:
-
-- Still issues the real GET against ``/do/search/?q=<q>``.
-- Parses the BePress server-rendered markup as it *should* appear (so that the moment SSR is restored or a real API ships, results flow through transparently).
-- Raises ``IAAUnavailableError`` with an actionable message when ``#results-list`` is empty or absent — the explicit anti-silent-failure tripwire from architecture principle #6.
-
-Workaround until SSR returns: cross-check IAA queries via ``search_zenon`` — Zenon DAI partially indexes IAA publications.
+The reverse-engineered `/do/search/results/json` endpoint pulled from the page's 2019 JS bundle has been retired — BePress migrated the route without updating the bundle. See [`docs/2026-05-15-iaa-solr-probe.md`](docs/2026-05-15-iaa-solr-probe.md) for the full sondierungsbericht.
 
 ## Disclaimer
 
