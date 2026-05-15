@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-15
+
+First tagged release. Captures the initial MVP (Zenon/IAA/ADAJ +
+resolvers), the inline_citation schema rollout, and the four Pfad II
+sprints that selectively reimplement the paper-search-mcp adapters
+most relevant to DAO/Digital-Humanities research.
+
 ### Added (Pfad II Sprint 4 — preprint currency)
 - `search_biorxiv` MCP tool for bioRxiv + medRxiv preprints. Backend
   is Europe PMC's `SRC:PPR`-filtered search (bioRxiv's native
@@ -172,3 +179,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ready for server-rendered results so no code change is needed when
   upstream SSR is restored or a playwright fallback is added post-MVP.
   See README "Known limitations".
+
+[Unreleased]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.4.0

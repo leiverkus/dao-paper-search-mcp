@@ -6,23 +6,38 @@ your OpenCode config yourself.
 ## 1. `~/.config/opencode/opencode.jsonc`
 
 Add the following entry to the `mcp` block, alongside the existing
-`paper-search` server:
+`paper-search` server. Three source options — pick one:
+
+**(a) Pinned to a release tag (recommended for stable workflows):**
 
 ```jsonc
 "dao-paper-search": {
   "type": "local",
   "command": [
     "/opt/homebrew/bin/uvx",
-    "--from", "git+file:///Users/patrick/Documents/Aktuell/dao-paper-search-mcp",
+    "--from", "git+https://github.com/leiverkus/dao-paper-search-mcp@v0.4.0",
     "python", "-m", "dao_paper_search_mcp.server"
   ],
   "enabled": true,
   "environment": {
-    "WIKIDATA_USER_AGENT": "dao-paper-search-mcp/0.1 (patrick.leiverkus@uni-oldenburg.de)",
-    "DAO_PAPER_SEARCH_RATE_LIMIT_MS": "1000"
+    "WIKIDATA_USER_AGENT": "dao-paper-search-mcp/0.4 (patrick.leiverkus@uni-oldenburg.de)",
+    "DAO_PAPER_SEARCH_RATE_LIMIT_MS": "1000",
+    "CORE_API_KEY": "${CORE_API_KEY}",
+    "SEMANTIC_SCHOLAR_API_KEY": "${SEMANTIC_SCHOLAR_API_KEY}"
   }
 }
 ```
+
+Bump the `@vX.Y.Z` segment when you want to pick up a newer release.
+Inspect changes in CHANGELOG.md before upgrading.
+
+**(b) Latest `main`** (no pinning — picks up changes immediately):
+
+Replace the `--from` argument with `git+https://github.com/leiverkus/dao-paper-search-mcp`.
+
+**(c) Local checkout** (for development while editing the source):
+
+Replace the `--from` argument with `git+file:///Users/patrick/Documents/Aktuell/dao-paper-search-mcp`.
 
 After saving, verify with:
 
