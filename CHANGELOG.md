@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-05-18
+
+Privacy fix — remove personal data from public repo; configurable contact e-mail.
+
+### Changed
+
+- **`DAO_PAPER_SEARCH_CONTACT_EMAIL` env var** replaces all hardcoded e-mail addresses in
+  adapter User-Agent / polite-pool headers (OpenAlex, Crossref, CORE, arXiv, Europe PMC,
+  Zenodo, IAA, Wikidata). Default: `"anonymous"`. Set the variable to improve rate-limit
+  priority on APIs that support a polite pool.
+- `pyproject.toml`: author e-mail removed from `authors` field.
+
+### Fixed
+
+- Local filesystem paths (`/Users/patrick/…`) removed from README and all `docs/` files;
+  replaced with GitHub URL or generic `/path/to/` placeholder.
+- README OpenCode snippet updated: `WIKIDATA_USER_AGENT` replaced by
+  `DAO_PAPER_SEARCH_CONTACT_EMAIL`; env var behaviour documented.
+- German fragments (`Pfad II`, `DSGVO-konform`) translated to English.
+
+### Added
+
+- `src/dao_paper_search_mcp/utils/contact.py` — `CONTACT_EMAIL` constant read from
+  `DAO_PAPER_SEARCH_CONTACT_EMAIL` env var; imported by all adapters and the Wikidata resolver.
+
+---
+
 ## [0.7.2] - 2026-05-18
 
 Datenquellen-Schicht: DOI-Normalisierung zentralisiert, Adapter-Coverage-Tests, Dubletten-Hook.
@@ -565,7 +592,8 @@ most relevant to DAO/Digital-Humanities research.
   upstream SSR is restored or a playwright fallback is added post-MVP.
   See README "Known limitations".
 
-[Unreleased]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.7.3...HEAD
+[0.7.3]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.6.4...v0.7.0
