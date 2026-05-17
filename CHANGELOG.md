@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-05-18
+
+Datenquellen-Schicht: DOI-Normalisierung zentralisiert, Adapter-Coverage-Tests, Dubletten-Hook.
+
+**Why:** Live-Test am 2026-05-18 (Qwen 3.5 122B, Negev-Festungen) zeigte Yahalom-Mack et al.
+2015 mit `URL: [openalex.org/W2592690738]` statt DOI-Link. Schema-v2.1-Logik war korrekt —
+die Exploration ergab, dass der OpenAlex-Adapter den DOI-Pfad schon richtig schrieb; der
+eigentliche Handlungsbedarf war ein divergenter Pro-Adapter-Helper ohne gemeinsame
+Normalisierungsstrategie und fehlende Regressions-Sperren auf Adapter-Ebene.
+
+### Added
+
+- `src/dao_paper_search_mcp/utils/doi.py` — zentrale `normalize_doi()`: strippt alle
+  Resolver-Präfixe (`https://doi.org/`, `http://dx.doi.org/`, `info:doi/`, `doi:` …),
+  lowercased (DOI-Handbook-konform, erleichtert Dubletten-Detection), gibt `None` zurück
+  wenn kein `10.`-Präfix übrig bleibt.
+- `src/dao_paper_search_mcp/dedup.py` — `dedupe_key(DAOPaper) -> Optional[str]`: reine
+  Key-Funktion auf normalisiertem DOI als Vorbereitung für Session-6-Merge-Logik. Noch
+  kein Konsument; die Funktion ist getestet und wartet auf Verkabelung.
+- `tests/test_doi_normalization.py` — 17 Unit-Tests für alle Edge Cases aus Briefing §IV
+  (diverse Resolver-Präfixe, Groß/Kleinschreibung, Whitespace, Leerstring, Nicht-DOI-URLs).
+- `tests/test_adapter_doi_coverage.py` — parametrisierte Coverage-Matrix (7 JSON-Adapter:
+  OpenAlex, Crossref, Semantic Scholar, CORE, bioRxiv, Zenodo, Zenon) plus dedizierter
+  Yahalom-Mack-Regress-Test (`test_openalex_yahalom_mack_renders_doi_in_bibliography_line`).
+- `tests/fixtures/openalex_yahalom_mack_2015.json` — frozen OpenAlex-Response für W2592690738
+  (Yahalom-Mack et al. 2015, DOI `10.1179/0334435515z.00000000054`).
+- `tests/test_dedup.py` — 4 Tests: korrekter Key, Case-Kollaps (`040X`↔`040x`), `None`
+  ohne DOI, `None` bei Leerstring-DOI.
+
+### Changed (Refactor, kein Verhaltenswechsel außer Lowercasing)
+
+- Alle 9 JSON-basierten Adapter (`openalex`, `iaa`, `crossref`, `semantic_scholar`, `arxiv`,
+  `core`, `biorxiv`, `zenon`, `zenodo`) nutzen jetzt `normalize_doi()` statt ad-hoc
+  `.strip()`/`removeprefix()`-Ketten.
+- Duplizierte `_strip_doi_prefix()`-Implementierungen in `openalex.py` und `iaa.py` entfernt.
+
+### Tests
+
+298 passed, 3 xfailed (war 285/3 nach Session 4). 24 neue Tests.
+
+---
+
 ## [0.7.1] - 2026-05-18
 
 Schema v2.1 — DOI/URL link appended to `authoritative_bibliography_line`.
@@ -523,7 +565,10 @@ most relevant to DAO/Digital-Humanities research.
   upstream SSR is restored or a playwright fallback is added post-MVP.
   See README "Known limitations".
 
-[Unreleased]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.6.4...HEAD
+[Unreleased]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.7.2...HEAD
+[0.7.2]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.7.1...v0.7.2
+[0.7.1]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.7.0...v0.7.1
+[0.7.0]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.6.4...v0.7.0
 [0.6.4]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.6.4
 [0.6.3]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.6.3
 [0.6.2]: https://github.com/leiverkus/dao-paper-search-mcp/releases/tag/v0.6.2

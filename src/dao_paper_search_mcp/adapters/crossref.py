@@ -35,6 +35,7 @@ from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
+from ..utils.doi import normalize_doi
 
 log = logging.getLogger(__name__)
 
@@ -164,7 +165,7 @@ def _publication_status_from_type(item_type: Optional[str]) -> PublicationStatus
 
 
 def _item_to_paper(item: Mapping[str, Any]) -> Optional[DAOPaper]:
-    doi = (item.get("DOI") or "").strip()
+    doi = normalize_doi(item.get("DOI"))
     if not doi:
         # Without a DOI we have no stable identifier and no link target —
         # rather than fabricate a fallback, drop the hit. Hallucination

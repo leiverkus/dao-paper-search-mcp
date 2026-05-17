@@ -36,6 +36,7 @@ import re
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
+from ..utils.doi import normalize_doi
 from ..resolvers.gazetteer import site_id_tokens_from_zenon_record
 
 log = logging.getLogger(__name__)
@@ -159,7 +160,7 @@ def _extract_doi(record: Mapping[str, Any]) -> Optional[str]:
             s = s.removeprefix("https://doi.org/").removeprefix("http://doi.org/")
             m = _DOI_RE.search(s)
             if m:
-                return m.group(0).rstrip(".,;)")
+                return normalize_doi(m.group(0).rstrip(".,;)"))
     for url in record.get("urls") or []:
         if isinstance(url, dict):
             href = url.get("url") or url.get("href") or ""
@@ -167,7 +168,7 @@ def _extract_doi(record: Mapping[str, Any]) -> Optional[str]:
             href = str(url)
         m = _DOI_RE.search(href)
         if m:
-            return m.group(0).rstrip(".,;)")
+            return normalize_doi(m.group(0).rstrip(".,;)"))
     return None
 
 

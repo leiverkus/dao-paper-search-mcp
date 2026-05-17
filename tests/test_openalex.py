@@ -13,7 +13,6 @@ from dao_paper_search_mcp.adapters.openalex import (
     _format_journal_or_volume,
     _format_pages,
     _reconstruct_abstract,
-    _strip_doi_prefix,
     _strip_openalex_id_prefix,
     _work_to_paper,
     search_openalex_impl,
@@ -68,17 +67,6 @@ NO_DOI_WORK = {
     "biblio": {},
     "open_access": {"is_oa": True, "oa_url": "https://example.org/oa.pdf"},
 }
-
-
-def test_strip_doi_prefix_handles_variants() -> None:
-    assert _strip_doi_prefix("https://doi.org/10.1/x") == "10.1/x"
-    assert _strip_doi_prefix("http://dx.doi.org/10.1/x") == "10.1/x"
-    assert _strip_doi_prefix("10.1/x") == "10.1/x"
-    assert _strip_doi_prefix("doi:10.1/x") == "10.1/x"
-    assert _strip_doi_prefix(None) is None
-    assert _strip_doi_prefix("") is None
-    # Non-DOI URL should not be silently mistaken for one.
-    assert _strip_doi_prefix("https://example.org/some-page") is None
 
 
 def test_strip_openalex_id_prefix() -> None:

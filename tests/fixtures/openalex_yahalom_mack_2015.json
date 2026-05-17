@@ -1,0 +1,32 @@
+{
+  "id": "https://openalex.org/W2592690738",
+  "doi": "https://doi.org/10.1179/0334435515Z.00000000054",
+  "title": "Lead isotope analysis of slag-tempered Negev Highlands pottery",
+  "display_name": "Lead isotope analysis of slag-tempered Negev Highlands pottery",
+  "publication_year": 2015,
+  "publication_date": "2015-01-01",
+  "type": "journal-article",
+  "language": "en",
+  "authorships": [
+    {"author": {"id": "A1", "display_name": "Naama Yahalom-Mack"}},
+    {"author": {"id": "A2", "display_name": "Mario A. S. Martin"}},
+    {"author": {"id": "A3", "display_name": "Adi Eliyahu-Behar"}},
+    {"author": {"id": "A4", "display_name": "Israel Finkelstein"}}
+  ],
+  "primary_location": {
+    "source": {
+      "display_name": "Tel Aviv",
+      "issn_l": "0334-4355"
+    }
+  },
+  "biblio": {"volume": "42", "issue": "2", "first_page": "211", "last_page": "228"},
+  "open_access": {"is_oa": false, "oa_url": null},
+  "abstract_inverted_index": {
+    "Lead": [0],
+    "isotope": [1],
+    "analysis": [2],
+    "of": [3],
+    "Negev": [4],
+    "pottery": [5]
+  }
+}

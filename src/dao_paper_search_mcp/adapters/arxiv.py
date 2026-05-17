@@ -41,6 +41,7 @@ from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
+from ..utils.doi import normalize_doi
 
 log = logging.getLogger(__name__)
 
@@ -158,7 +159,7 @@ def _entry_to_paper(entry: ET.Element) -> Optional[DAOPaper]:
     abstract = re.sub(r"\s+", " ", abstract_raw) if abstract_raw else None
     authors = _format_authors(entry)
     year = _extract_year(entry)
-    doi = _arxiv_text(entry, "doi") or None
+    doi = normalize_doi(_arxiv_text(entry, "doi"))
     journal_ref = _arxiv_text(entry, "journal_ref") or None
     pdf_url = _pdf_link(entry)
 

@@ -54,6 +54,7 @@ from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
+from ..utils.doi import normalize_doi
 
 log = logging.getLogger(__name__)
 
@@ -151,15 +152,6 @@ def _detect_language(text: str) -> str:
     return "und"
 
 
-def _strip_doi_prefix(raw: str) -> Optional[str]:
-    """``info:doi/10.70967/x.y`` → ``10.70967/x.y``."""
-    s = raw.strip()
-    for prefix in ("info:doi/", "doi:", "https://doi.org/", "http://doi.org/"):
-        if s.lower().startswith(prefix):
-            return s[len(prefix):]
-    return None
-
-
 def _classify_identifiers(identifier_texts: list[str]) -> tuple[Optional[str], Optional[str], Optional[str]]:
     """Sort a record's ``dc:identifier`` values into (doi, landing, pdf).
 
@@ -175,7 +167,7 @@ def _classify_identifiers(identifier_texts: list[str]) -> tuple[Optional[str], O
         if not s:
             continue
         if s.startswith("info:doi/") or s.lower().startswith("doi:"):
-            d = _strip_doi_prefix(s)
+            d = normalize_doi(s)
             if d:
                 doi = d
         elif s.lower().endswith(".pdf") or "/viewcontent" in s.lower():

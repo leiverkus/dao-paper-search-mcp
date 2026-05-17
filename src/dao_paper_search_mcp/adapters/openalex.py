@@ -37,6 +37,7 @@ from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
+from ..utils.doi import normalize_doi
 
 log = logging.getLogger(__name__)
 
@@ -47,24 +48,6 @@ HTTP_TIMEOUT = 30.0
 # parameter, not a User-Agent suffix.
 _POLITE_MAILTO = "patrick.leiverkus@uni-oldenburg.de"
 _USER_AGENT = "dao-paper-search-mcp/0.1 (+https://github.com/leiverkus/dao-paper-search-mcp)"
-
-
-def _strip_doi_prefix(doi_url: Optional[str]) -> Optional[str]:
-    """``https://doi.org/10.x/y`` → ``10.x/y`` (and tolerate scheme variants)."""
-    if not doi_url:
-        return None
-    s = doi_url.strip()
-    for prefix in (
-        "https://doi.org/",
-        "http://doi.org/",
-        "https://dx.doi.org/",
-        "http://dx.doi.org/",
-        "doi.org/",
-        "doi:",
-    ):
-        if s.lower().startswith(prefix):
-            return s[len(prefix):]
-    return s if s.startswith("10.") else None
 
 
 def _strip_openalex_id_prefix(work_id_url: Optional[str]) -> Optional[str]:
@@ -182,7 +165,7 @@ def _open_access_url(work: Mapping[str, Any]) -> Optional[str]:
 
 
 def _work_to_paper(work: Mapping[str, Any]) -> Optional[DAOPaper]:
-    doi = _strip_doi_prefix(work.get("doi"))
+    doi = normalize_doi(work.get("doi"))
     openalex_id = _strip_openalex_id_prefix(work.get("id"))
     if not doi and not openalex_id:
         # Neither identifier present — drop. We need at least one

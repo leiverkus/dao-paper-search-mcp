@@ -29,6 +29,7 @@ from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
+from ..utils.doi import normalize_doi
 
 log = logging.getLogger(__name__)
 
@@ -147,7 +148,7 @@ def _record_to_paper(record: Mapping[str, Any]) -> Optional[DAOPaper]:
     if not isinstance(metadata, dict):
         return None
 
-    doi = (record.get("doi") or metadata.get("doi") or "").strip() or None
+    doi = normalize_doi(record.get("doi") or metadata.get("doi"))
     if not doi:
         # Zenodo always assigns a DOI; missing one means the record is
         # malformed or pre-deposit. Drop — no fabricated anchor.

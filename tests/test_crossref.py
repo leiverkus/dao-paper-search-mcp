@@ -41,7 +41,7 @@ COHEN_1979_ITEM = {
 # Multi-author Boaretto + Finkelstein + Shahack-Gross 2010 Radiocarbon
 # — exercises the explicit 3-author inline form added in Schema v2.
 BOARETTO_2010_ITEM = {
-    "DOI": "10.1017/S0033822200044982",
+    "DOI": "10.1017/s0033822200044982",
     "type": "journal-article",
     "title": [
         "Radiocarbon Results from the Iron IIA Site of Atar Haroa in the "
@@ -57,7 +57,7 @@ BOARETTO_2010_ITEM = {
         {"family": "Shahack-Gross", "given": "Ruth"},
     ],
     "published-print": {"date-parts": [[2010]]},
-    "URL": "https://doi.org/10.1017/S0033822200044982",
+    "URL": "https://doi.org/10.1017/s0033822200044982",
     "language": "en",
     "abstract": "<jats:p>We report radiocarbon dates from the Iron IIA site…</jats:p>",
 }
@@ -177,14 +177,14 @@ def test_item_to_paper_three_authors_explicit_inline_form() -> None:
     assert p.inline_citation is not None
     assert p.inline_citation.markdown == (
         "[(Boaretto, Finkelstein & Shahack-Gross 2010)]"
-        "(https://doi.org/10.1017/S0033822200044982)"
+        "(https://doi.org/10.1017/s0033822200044982)"
     )
     # Schema v2: structured bibliography line comes from Venue metadata.
     assert p.inline_citation.authoritative_bibliography_line == (
         "Boaretto, E., Finkelstein, I., & Shahack-Gross, R. (2010). "
         "Radiocarbon Results from the Iron IIA Site of Atar Haroa in "
         "the Negev Highlands. *Radiocarbon* 52(1), 1-12."
-        " DOI: [10.1017/S0033822200044982](https://doi.org/10.1017/S0033822200044982)"
+        " DOI: [10.1017/s0033822200044982](https://doi.org/10.1017/s0033822200044982)"
     )
     # JATS-stripped abstract.
     assert p.abstract is not None

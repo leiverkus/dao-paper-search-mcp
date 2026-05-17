@@ -34,6 +34,7 @@ from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
+from ..utils.doi import normalize_doi
 
 log = logging.getLogger(__name__)
 
@@ -89,7 +90,7 @@ def _parse_author_string(author_string: str) -> list[str]:
 
 def _doi_from_record(record: Mapping[str, Any]) -> Optional[str]:
     """Pull the DOI from the top-level ``doi`` field or the fulltext id list."""
-    doi = (record.get("doi") or "").strip()
+    doi = normalize_doi(record.get("doi"))
     if doi:
         return doi
     # Europe PMC sometimes ships the DOI inside ``fullTextIdList.fullTextId``.
@@ -98,9 +99,9 @@ def _doi_from_record(record: Mapping[str, Any]) -> Optional[str]:
         ids = ft_list.get("fullTextId") or []
         if isinstance(ids, list):
             for entry in ids:
-                s = str(entry or "").strip()
-                if s.startswith("10."):
-                    return s
+                d = normalize_doi(entry)
+                if d:
+                    return d
     return None
 
 

@@ -78,6 +78,7 @@ Then update `~/.config/opencode/agent/research.md` to route Levant/IAA/DoA-Jorda
 - **Structured verification notes.** When uncertain, the adapter sets `verification_note`, never guesses.
 - **Stdio cleanliness.** MCP stdout is reserved for JSON-RPC; all logging goes to stderr.
 - **Output-shape lock-in for citations.** Every hit carries an `inline_citation` block whose `markdown` field is a pre-rendered Markdown link (with `⚠️`-prefix when `audit.warn_marker` or `audit.aggregator` is set). The agent copies this verbatim instead of formatting citations itself — structural enforcement of the `AGENTS.md` inline-link rule. Two extra fields (`authoritative_authors_label`, `authoritative_bibliography_line`) carry the tool-authoritative Author-Year and reference-list strings to prevent DOI-consistent author-year hallucinations.
+- **Centralised DOI normalisation.** All adapters run DOIs through `utils.doi.normalize_doi()` — stripping resolver prefixes (`https://doi.org/`, `info:doi/`, `doi:` …) and lower-casing (DOI Handbook §2.4). Produces bare, case-insensitive `10.<registrant>/…` strings for reliable deduplication. The render layer always reconstructs the full link from the bare string, so case drift in upstream APIs never leaks into bibliography output.
 
 ## Inline citations
 

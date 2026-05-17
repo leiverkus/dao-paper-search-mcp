@@ -25,7 +25,6 @@ from dao_paper_search_mcp.adapters.iaa import (
     _query_tokens,
     _record_matches,
     _resolve_set_spec,
-    _strip_doi_prefix,
     search_iaa_impl,
 )
 from dao_paper_search_mcp.models import DAOPaper
@@ -54,7 +53,7 @@ SAMPLE_LISTRECORDS = """<?xml version="1.0" encoding="UTF-8"?>
           <dc:date>2024-11-26T10:12:05Z</dc:date>
           <dc:type>text</dc:type>
           <dc:identifier>https://publications.iaa.org.il/atiqot/vol116/iss1/3</dc:identifier>
-          <dc:identifier>info:doi/10.70967/2948-040X.1124</dc:identifier>
+          <dc:identifier>info:doi/10.70967/2948-040x.1124</dc:identifier>
           <dc:identifier>https://publications.iaa.org.il/context/atiqot/article/1124/viewcontent/en_116.pdf</dc:identifier>
           <dc:source>'Atiqot</dc:source>
           <dc:publisher>Israel Antiquities Authority Publications Portal</dc:publisher>
@@ -151,21 +150,14 @@ def test_detect_language_hebrew_english_und() -> None:
     assert _detect_language("123 456") == "und"
 
 
-def test_strip_doi_prefix_handles_variants() -> None:
-    assert _strip_doi_prefix("info:doi/10.70967/x.y") == "10.70967/x.y"
-    assert _strip_doi_prefix("doi:10.70967/x.y") == "10.70967/x.y"
-    assert _strip_doi_prefix("https://doi.org/10.1/z") == "10.1/z"
-    assert _strip_doi_prefix("not-a-doi") is None
-
-
 def test_classify_identifiers_routes_three_types() -> None:
     identifiers = [
         "https://publications.iaa.org.il/atiqot/vol116/iss1/3",
-        "info:doi/10.70967/2948-040X.1124",
+        "info:doi/10.70967/2948-040x.1124",
         "https://publications.iaa.org.il/context/atiqot/article/1124/viewcontent/en_116.pdf",
     ]
     doi, landing, pdf = _classify_identifiers(identifiers)
-    assert doi == "10.70967/2948-040X.1124"
+    assert doi == "10.70967/2948-040x.1124"
     assert landing == "https://publications.iaa.org.il/atiqot/vol116/iss1/3"
     assert pdf.endswith("en_116.pdf")
 
@@ -250,12 +242,12 @@ def test_parse_page_extracts_matching_records() -> None:
     assert p.authors == ["Cohen, Rudolph", "Yisrael, Yigal"]
     assert p.year == 2024
     assert p.identifiers is not None
-    assert p.identifiers.doi == "10.70967/2948-040X.1124"
+    assert p.identifiers.doi == "10.70967/2948-040x.1124"
     assert p.identifiers.iaa_pub_id == "atiqot/vol116/iss1/3"
     # Inline citation: DOI present → Author-Year against doi.org.
     assert p.inline_citation is not None
     assert p.inline_citation.markdown == (
-        "[(Cohen & Yisrael 2024)](https://doi.org/10.70967/2948-040X.1124)"
+        "[(Cohen & Yisrael 2024)](https://doi.org/10.70967/2948-040x.1124)"
     )
     assert p.language == "en"
     assert p.open_access_url is not None

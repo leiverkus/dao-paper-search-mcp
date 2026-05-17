@@ -38,6 +38,7 @@ from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
+from ..utils.doi import normalize_doi
 
 log = logging.getLogger(__name__)
 
@@ -184,7 +185,7 @@ def _paper_to_paper(paper: Mapping[str, Any]) -> Optional[DAOPaper]:
     if not isinstance(external, dict):
         external = {}
 
-    doi = (external.get("DOI") or "").strip() or None
+    doi = normalize_doi(external.get("DOI"))
     arxiv_id = (external.get("ArXiv") or "").strip() or None
     s2_id = (paper.get("paperId") or "").strip() or None
 

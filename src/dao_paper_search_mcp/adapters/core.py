@@ -35,6 +35,7 @@ from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
+from ..utils.doi import normalize_doi
 
 log = logging.getLogger(__name__)
 
@@ -146,7 +147,7 @@ def _verification_note(work: Mapping[str, Any]) -> Optional[str]:
 def _work_to_paper(work: Mapping[str, Any]) -> Optional[DAOPaper]:
     core_id_raw = work.get("id")
     core_id = str(core_id_raw).strip() if core_id_raw is not None else None
-    doi = (work.get("doi") or "").strip() or None
+    doi = normalize_doi(work.get("doi"))
     if not core_id and not doi:
         # Neither anchor → drop. Same policy as Crossref/OpenAlex/S2.
         return None
