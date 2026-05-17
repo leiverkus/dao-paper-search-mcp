@@ -37,6 +37,7 @@ from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
+from ..utils.contact import CONTACT_EMAIL
 from ..utils.doi import normalize_doi
 
 log = logging.getLogger(__name__)
@@ -45,8 +46,9 @@ OPENALEX_API = "https://api.openalex.org/works"
 HTTP_TIMEOUT = 30.0
 
 # Polite-pool identifier — OpenAlex docs prefer this as a query
-# parameter, not a User-Agent suffix.
-_POLITE_MAILTO = "patrick.leiverkus@uni-oldenburg.de"
+# parameter, not a User-Agent suffix. Set DAO_PAPER_SEARCH_CONTACT_EMAIL
+# to improve rate-limit priority.
+_POLITE_MAILTO = CONTACT_EMAIL
 _USER_AGENT = "dao-paper-search-mcp/0.1 (+https://github.com/leiverkus/dao-paper-search-mcp)"
 
 

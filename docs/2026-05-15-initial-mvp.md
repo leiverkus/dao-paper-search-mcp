@@ -2,7 +2,7 @@
 
 **Stand:** 2026-05-15
 **Zielgruppe:** Claude Code Session, die das Repo *neu anlegt* und den MVP baut
-**Repo-Pfad (anzulegen):** `/Users/patrick/Documents/Aktuell/dao-paper-search-mcp/`
+**Repo-Pfad (anzulegen):** `/path/to/dao-paper-search-mcp/`
 
 ---
 
@@ -27,7 +27,7 @@ Patrick Leiverkus (DAO, UB Oldenburg) arbeitet in der südlichen Levante (Bronze
 
 ## II. Repository-Setup
 
-- **Pfad:** `/Users/patrick/Documents/Aktuell/dao-paper-search-mcp/`
+- **Pfad:** `/path/to/dao-paper-search-mcp/`
 - **Sprache:** Python ≥ 3.11
   - Begründung: Konsistenz mit paper-search-mcp; gute SRU/OAI-PMH-Bibliotheks-Landschaft (`sruthi`, `pyoai`); Wikidata-Tooling (`SPARQLWrapper`, `wikidataintegrator`); strukturierte Output-Schemas via Pydantic.
 - **MCP-Framework:** FastMCP (analog paper-search-mcp). Aktuelle Anthropic-MCP-Python-SDK.
@@ -441,12 +441,12 @@ Neuer Eintrag im `mcp`-Block, parallel zu `paper-search`:
   "type": "local",
   "command": [
     "/opt/homebrew/bin/uvx",
-    "--from", "git+file:///Users/patrick/Documents/Aktuell/dao-paper-search-mcp",
+    "--from", "git+https://github.com/leiverkus/dao-paper-search-mcp",
     "python", "-m", "dao_paper_search_mcp.server"
   ],
   "enabled": true,
   "environment": {
-    "WIKIDATA_USER_AGENT": "dao-paper-search-mcp/0.1 (patrick.leiverkus@uni-oldenburg.de)",
+    "WIKIDATA_USER_AGENT": "dao-paper-search-mcp/0.1 (your-email@example.com)",
     "DAO_PAPER_SEARCH_RATE_LIMIT_MS": "1000"
   }
 }

@@ -16,7 +16,7 @@ The DAO-specific sources (Zenon DAI, IAA Publications, ADAJ) are the original ra
 | `resolve_author` | Wikidata SPARQL + local override list + GND fallback | implemented |
 | `resolve_site` | iDAI.gazetteer (DAI's authoritative place register) | implemented |
 
-### Cross-platform (Pfad II — selective `paper-search-mcp` substitution)
+### Cross-platform (selective `paper-search-mcp` substitution)
 
 | Tool | Source | Status |
 |---|---|---|
@@ -34,17 +34,17 @@ Propylaeum, IxTheo, Persée, OpenEdition, Gnomon Online, TOCS-IN — one adapter
 
 ## Install / Run
 
-Locally via `uvx` from the working tree:
+Via `uvx` directly from GitHub:
 
 ```bash
-uvx --from git+file:///Users/patrick/Documents/Aktuell/dao-paper-search-mcp \
+uvx --from git+https://github.com/leiverkus/dao-paper-search-mcp \
   python -m dao_paper_search_mcp.server
 ```
 
-Or after a GitHub push:
+Or clone the repo and run from the working tree:
 
 ```bash
-uvx --from git+https://github.com/<owner>/dao-paper-search-mcp \
+uvx --from git+file:///path/to/dao-paper-search-mcp \
   python -m dao_paper_search_mcp.server
 ```
 
@@ -56,13 +56,13 @@ Add to `~/.config/opencode/opencode.jsonc` under the `mcp` block:
 "dao-paper-search": {
   "type": "local",
   "command": [
-    "/opt/homebrew/bin/uvx",
-    "--from", "git+file:///Users/patrick/Documents/Aktuell/dao-paper-search-mcp",
+    "uvx",
+    "--from", "git+https://github.com/leiverkus/dao-paper-search-mcp",
     "python", "-m", "dao_paper_search_mcp.server"
   ],
   "enabled": true,
   "environment": {
-    "WIKIDATA_USER_AGENT": "dao-paper-search-mcp/0.1 (patrick.leiverkus@uni-oldenburg.de)",
+    "WIKIDATA_USER_AGENT": "dao-paper-search-mcp/0.1 (your-email@example.com)",
     "DAO_PAPER_SEARCH_RATE_LIMIT_MS": "1000"
   }
 }
@@ -144,4 +144,4 @@ The reverse-engineered `/do/search/results/json` endpoint pulled from the page's
 
 ## Disclaimer
 
-MIT licensed. No cloud upload, runs entirely locally. DSGVO-konform.
+MIT licensed. No cloud upload, runs entirely locally. GDPR-compliant: no personal data is collected or transmitted by the server itself.

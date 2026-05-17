@@ -35,6 +35,7 @@ from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
+from ..utils.contact import CONTACT_EMAIL
 from ..utils.doi import normalize_doi
 
 log = logging.getLogger(__name__)
@@ -45,7 +46,7 @@ HTTP_TIMEOUT = 30.0
 _USER_AGENT = (
     "dao-paper-search-mcp/0.1 "
     "(+https://github.com/leiverkus/dao-paper-search-mcp; "
-    "mailto:patrick.leiverkus@uni-oldenburg.de)"
+    f"mailto:{CONTACT_EMAIL})"
 )
 
 # Substrings in dataProvider.name that mark a hit as a secondary

@@ -30,6 +30,7 @@ import yaml
 from mcp.server.fastmcp import FastMCP
 
 from ..models import ResolvedAuthor
+from ..utils.contact import CONTACT_EMAIL
 
 log = logging.getLogger(__name__)
 
@@ -38,8 +39,8 @@ GND_LOOKUP = "https://lobid.org/gnd/search"
 HTTP_TIMEOUT = 20.0
 
 _DEFAULT_UA = (
-    "dao-paper-search-mcp/0.1 (https://github.com/patrick-leiverkus/dao-paper-search-mcp;"
-    " patrick.leiverkus@uni-oldenburg.de)"
+    "dao-paper-search-mcp/0.1 (https://github.com/leiverkus/dao-paper-search-mcp;"
+    f" {CONTACT_EMAIL})"
 )
 
 

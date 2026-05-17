@@ -20,7 +20,7 @@ Add the following entry to the `mcp` block, alongside the existing
   ],
   "enabled": true,
   "environment": {
-    "WIKIDATA_USER_AGENT": "dao-paper-search-mcp/0.6 (patrick.leiverkus@uni-oldenburg.de)",
+    "WIKIDATA_USER_AGENT": "dao-paper-search-mcp/0.6 (your-email@example.com)",
     "DAO_PAPER_SEARCH_RATE_LIMIT_MS": "1000",
     "CORE_API_KEY": "${CORE_API_KEY}",
     "SEMANTIC_SCHOLAR_API_KEY": "${SEMANTIC_SCHOLAR_API_KEY}"
@@ -37,7 +37,7 @@ Replace the `--from` argument with `git+https://github.com/leiverkus/dao-paper-s
 
 **(c) Local checkout** (for development while editing the source):
 
-Replace the `--from` argument with `git+file:///Users/patrick/Documents/Aktuell/dao-paper-search-mcp`.
+Replace the `--from` argument with `git+https://github.com/leiverkus/dao-paper-search-mcp`.
 
 After saving, verify with:
 

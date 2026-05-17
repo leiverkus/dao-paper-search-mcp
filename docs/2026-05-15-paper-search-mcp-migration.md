@@ -139,7 +139,7 @@ In OpenCode-Config (`opencode.jsonc`) die `environment`-Sektion deines dao-paper
   "command": [ /* unverändert */ ],
   "enabled": true,
   "environment": {
-    "WIKIDATA_USER_AGENT": "dao-paper-search-mcp/0.1 (patrick.leiverkus@uni-oldenburg.de)",
+    "WIKIDATA_USER_AGENT": "dao-paper-search-mcp/0.1 (your-email@example.com)",
     "DAO_PAPER_SEARCH_RATE_LIMIT_MS": "1000",
     "CORE_API_KEY": "${CORE_API_KEY}",
     "SEMANTIC_SCHOLAR_API_KEY": "${SEMANTIC_SCHOLAR_API_KEY}"
