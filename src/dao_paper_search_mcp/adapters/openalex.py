@@ -36,7 +36,7 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
-from ..models import Audit, DAOPaper, Identifiers, PublicationStatus
+from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
 
 log = logging.getLogger(__name__)
 
@@ -130,6 +130,21 @@ def _format_pages(work: Mapping[str, Any]) -> Optional[str]:
     return first or None
 
 
+def _build_venue(work: Mapping[str, Any]) -> Optional[Venue]:
+    primary = work.get("primary_location") or {}
+    source = primary.get("source") if isinstance(primary, dict) else None
+    name: Optional[str] = None
+    if isinstance(source, dict):
+        name = (source.get("display_name") or "").strip() or None
+    biblio = work.get("biblio") or {}
+    volume = (biblio.get("volume") or "").strip() or None
+    issue = (biblio.get("issue") or "").strip() or None
+    pages = _format_pages(work)
+    if not any((name, volume, issue, pages)):
+        return None
+    return Venue(name=name, volume=volume, issue=issue, pages=pages)
+
+
 def _reconstruct_abstract(inv: Optional[Mapping[str, Any]]) -> Optional[str]:
     """Rebuild a readable abstract from OpenAlex's inverted index.
 
@@ -205,6 +220,7 @@ def _work_to_paper(work: Mapping[str, Any]) -> Optional[DAOPaper]:
         landing_page_url=landing_page_url,
         open_access_url=open_access_url,
         audit=audit,
+        venue=_build_venue(work),
     )
 
     return DAOPaper(
@@ -303,18 +319,14 @@ def register(mcp: FastMCP) -> None:
         institutional metadata, and works without DOIs (preprints,
         institutional reports). About 85% of hits carry a DOI.
 
-        Citation rendering: each returned ``DAOPaper`` carries an
-        ``inline_citation`` block with pre-rendered Markdown. Copy
-        ``inline_citation.markdown_recommended`` verbatim when citing a
-        hit — do not reformat to ``[(domain)](url)``. For DOI-bearing
-        hits the recommended form is ``[(Author Year)](doi.org/…)``;
-        for DOI-less hits it falls back to the OpenAlex landing page.
-        For bibliography or reference-list entries, copy
-        ``inline_citation.markdown_bibliography`` verbatim — it's
-        always set and prefers the DOI string in the visible label
-        when a DOI is registered (falls back gracefully to
-        Author-Year / Domain-Title / plain text otherwise). This is
-        the bibliography counterpart to ``markdown_recommended``.
+        Citation rendering (Schema v2): each returned ``DAOPaper``
+        carries an ``inline_citation`` block. Copy
+        ``inline_citation.markdown`` verbatim for in-text citations —
+        do not reformat. For the bibliography / reference-list section
+        copy ``inline_citation.authoritative_bibliography_line``
+        verbatim; if it is ``None`` (venue metadata incomplete) fall
+        back to Author-Year + URL/DOI rather than reconstructing the
+        reference line from training knowledge.
 
         Args:
             query: free-text search (relevance-ranked).

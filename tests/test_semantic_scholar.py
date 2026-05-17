@@ -130,7 +130,7 @@ def test_paper_to_paper_doi_form() -> None:
     assert p.audit is not None and p.audit.verification_note == "citation_count=87"
     # Inline citation: DOI present → Author-Year against doi.org.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended == (
+    assert p.inline_citation.markdown == (
         "[(Cohen 1979)](https://doi.org/10.2307/1356668)"
     )
 
@@ -149,7 +149,7 @@ def test_paper_to_paper_arxiv_only_falls_back_to_arxiv_landing() -> None:
     assert str(p.open_access_url) == "https://arxiv.org/pdf/2401.01234"
     # Inline citation: no DOI → Author-Year against arxiv.org.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended == (
+    assert p.inline_citation.markdown == (
         "[(Doe & Smith 2024)](https://arxiv.org/abs/2401.01234)"
     )
 
@@ -169,7 +169,7 @@ def test_paper_with_only_s2_id_uses_s2_landing() -> None:
     assert str(p.landing_page_url) == "https://www.semanticscholar.org/paper/xx000"
     assert p.inline_citation is not None
     assert (
-        p.inline_citation.markdown_recommended
+        p.inline_citation.markdown
         == "[(Author 2020)](https://www.semanticscholar.org/paper/xx000)"
     )
 
@@ -201,7 +201,7 @@ async def test_search_s2_impl_happy_path() -> None:
     assert isinstance(p, DAOPaper)
     assert p.source == "semantic_scholar"
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended.startswith("[(Cohen 1979)]")
+    assert p.inline_citation.markdown.startswith("[(Cohen 1979)]")
 
 
 @pytest.mark.asyncio

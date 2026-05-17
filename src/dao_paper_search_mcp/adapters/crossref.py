@@ -34,7 +34,7 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
-from ..models import Audit, DAOPaper, Identifiers, PublicationStatus
+from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
 
 log = logging.getLogger(__name__)
 
@@ -124,6 +124,16 @@ def _format_journal_or_volume(item: Mapping[str, Any]) -> Optional[str]:
     return title
 
 
+def _build_venue(item: Mapping[str, Any]) -> Optional[Venue]:
+    name = _first_or_none(item.get("container-title"))
+    volume = (item.get("volume") or "").strip() or None
+    issue = (item.get("issue") or "").strip() or None
+    pages = (item.get("page") or "").strip() or None
+    if not any((name, volume, issue, pages)):
+        return None
+    return Venue(name=name, volume=volume, issue=issue, pages=pages)
+
+
 def _full_title(item: Mapping[str, Any]) -> str:
     title = (_first_or_none(item.get("title")) or "").rstrip(":/ ")
     subtitle = (_first_or_none(item.get("subtitle")) or "").rstrip(":/ ")
@@ -181,6 +191,7 @@ def _item_to_paper(item: Mapping[str, Any]) -> Optional[DAOPaper]:
         landing_page_url=landing_page_url,
         open_access_url=None,
         audit=audit,
+        venue=_build_venue(item),
     )
 
     return DAOPaper(
@@ -276,16 +287,14 @@ def register(mcp: FastMCP) -> None:
         ``[(Author Year)](https://doi.org/...)`` form for academic
         body-text rendering.
 
-        Citation rendering: each returned ``DAOPaper`` carries an
-        ``inline_citation`` block with pre-rendered Markdown. Copy
-        ``inline_citation.markdown_recommended`` verbatim when citing a
-        hit — do not reformat to ``[(domain)](url)``. For bibliography
-        or reference-list entries, copy
-        ``inline_citation.markdown_bibliography`` verbatim — it's
-        always set and prefers the DOI string in the visible label
-        when a DOI is registered (falls back gracefully to
-        Author-Year / Domain-Title / plain text otherwise). This is
-        the bibliography counterpart to ``markdown_recommended``.
+        Citation rendering (Schema v2): each returned ``DAOPaper``
+        carries an ``inline_citation`` block. Copy
+        ``inline_citation.markdown`` verbatim for in-text citations —
+        do not reformat. For the bibliography / reference-list section
+        copy ``inline_citation.authoritative_bibliography_line``
+        verbatim; if it is ``None`` (venue metadata incomplete) fall
+        back to Author-Year + URL/DOI rather than reconstructing the
+        reference line from training knowledge.
 
         Args:
             query: free-text bibliographic query (matches title, authors,

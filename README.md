@@ -77,7 +77,7 @@ Then update `~/.config/opencode/agent/research.md` to route Levant/IAA/DoA-Jorda
 - **Schema fidelity.** All search tools return the same Pydantic model (`DAOPaper`).
 - **Structured verification notes.** When uncertain, the adapter sets `verification_note`, never guesses.
 - **Stdio cleanliness.** MCP stdout is reserved for JSON-RPC; all logging goes to stderr.
-- **Output-shape lock-in for citations.** Every hit carries an `inline_citation` block whose `markdown_recommended` field is a pre-rendered Markdown link (with `⚠️`-prefix when `audit.warn_marker` is set). The agent copies this verbatim instead of formatting citations itself — structural enforcement of the `AGENTS.md` inline-link rule. Multiple variants are exposed so the agent can pick the form that fits its prose.
+- **Output-shape lock-in for citations.** Every hit carries an `inline_citation` block whose `markdown` field is a pre-rendered Markdown link (with `⚠️`-prefix when `audit.warn_marker` or `audit.aggregator` is set). The agent copies this verbatim instead of formatting citations itself — structural enforcement of the `AGENTS.md` inline-link rule. Two extra fields (`authoritative_authors_label`, `authoritative_bibliography_line`) carry the tool-authoritative Author-Year and reference-list strings to prevent DOI-consistent author-year hallucinations.
 
 ## Inline citations
 
@@ -85,34 +85,29 @@ Each `DAOPaper` carries three blocks the agent should consume directly:
 
 - `identifiers`: structured DOI / Zenon / IAA / ADAJ IDs (coexists with the legacy `doi_or_id` string).
 - `audit`: `primary_source`, `aggregator`, `verification_note`, `warn_marker` — flags that drive the citation renderer.
-- `inline_citation`: pre-rendered Markdown plus the labels used to build it.
+- `inline_citation`: pre-rendered Markdown plus the tool-authoritative bibliography strings.
 
-### `inline_citation` fields
+### `inline_citation` fields (Schema v2, since v0.7.0)
 
 | Field | Purpose |
 |---|---|
-| `primary_url` | Canonical URL (priority: DOI > OpenAlex > Zenon > IAA > ADAJ > open_access_url > landing_page_url). |
-| `display_domain` | Display domain (`www.` stripped). |
-| `display_label_authoryear` | `"Cohen 1979"`, `"Cohen & Yisrael 1995"`, `"Cohen et al. 1979"` — `None` when author or year is missing. |
-| `display_label_domain` | Same as `display_domain`. |
-| `display_label_domain_title` | `"doi.org — Title fragment…"` — truncated to ~50 chars. |
-| `display_label_doi` | The bare DOI string (e.g. `"10.1179/tav.1984.1984.2.189"`) — `None` when no DOI. |
-| `markdown_authoryear` | `[(Cohen 1979)](url)` — Author-Year link form for academic body text. |
-| `markdown_domain` | `[(doi.org)](url)` — domain-only form for compact footnotes. |
-| `markdown_domain_title` | `[(doi.org — Title…)](url)` — domain-plus-title for web references. |
-| `markdown_doi` | `[(10.1179/tav.1984.1984.2.189)](https://doi.org/…)` — DOI string in the visible label, low-level variant for fine-grained callers. `None` when no DOI. |
-| `markdown_recommended` | The agent's first-choice variant **for body text**, with `⚠️`-prefix pre-applied when `audit.warn_marker` is set. **Copy this verbatim** in prose. |
-| `markdown_bibliography` | The agent's first-choice variant **for bibliography / reference-list entries**. Always set. Prefers the DOI form (visible label is the DOI string itself) when a DOI is registered, falls back through Author-Year → Domain-Title → Domain → plain text. ⚠️-prefix pre-applied for aggregator / warn-flagged hits. **Copy this verbatim** in the references list. |
-| `fallback_text` | `"Cohen 1979: 61–79"` — used when no `primary_url` exists (print-only). |
+| `url` | Canonical URL (priority: DOI > OpenAlex > Zenon > IAA > ADAJ > arXiv > Semantic Scholar > CORE > Europe PMC > open_access_url > landing_page_url). |
+| `markdown` | Finished in-text Markdown link. Author-Year form for academic hits (`[(Cohen 1979)](https://doi.org/…)`), Domain-Title form for web hits (`[(example.org — Title…)](url)`), Domain-only as last resort, and `⚠️`-prefixed for aggregator/warn-flagged hits. Print-only hits (no URL) collapse to `fallback_text`. **Copy this verbatim** in prose. |
+| `authoritative_authors_label` | Plain-text Author-Year string (`"Finkelstein 1999"`) — `None` when no author context exists. Use this when you want to render Author-Year yourself instead of copying `markdown`; do **not** reconstruct from `authors`/`year`. |
+| `authoritative_bibliography_line` | Full reference-list line (`"Finkelstein, I. (1999). Title. *BASOR* 314, 55–70."`). `None` when venue metadata is incomplete — in that case fall back to Author-Year + URL/DOI rather than reconstructing the line from training knowledge. **Copy verbatim** in the references list. |
+| `fallback_text` | `"Cohen 1979: 61–79"` — used when no `url` exists (print-only). |
 
-**Variant selection per context:**
+**Author-label rules (inline):**
 
-- **Body text** → `markdown_recommended` (defaults to Author-Year). The builder has already chosen the right shape for the source and pre-applied `⚠️` prefixes; copy verbatim.
-- **Bibliography / reference-list entries** at the end of a research-stand document → `markdown_bibliography` (always set, prefers DOI string label, graceful cascade for non-DOI sources). Copy verbatim — no field-picking required.
-- **Web-hit footnotes** without clean author-year context → `markdown_domain_title` (low-level).
-- **Print-only literature** (no `primary_url`) → `fallback_text` (bare Author-Year, no link wrapper). Do not invent a URL.
+- 1 author → `"Cohen 1979"`.
+- 2 authors → `"Cohen & Yisrael 1995"`.
+- 3 authors → `"Boaretto, Finkelstein & Shahack-Gross 2010"` (explicit, no et al.).
+- ≥4 authors → `"Bruins et al. 2011"`.
+- Particle names (`van der Plicht`, `von Daniken`) stay intact in both inline and bibliography forms.
 
-**`markdown_recommended` heuristic:** Author-Year form when both authors and year are available (the academic case); Domain-Title form when no Author-Year context exists (the web-hit case); Domain-only as last resort; `fallback_text` when no link target exists. The agent is free to pick a different variant if it fits the surrounding prose better.
+**Bibliography author-rules:** family + initials, Oxford comma before `&`, full list (no et al.). 1 author: `"Cohen, R."`; 2: `"Cohen, R., & Yisrael, Y."`; ≥3: `"Boaretto, E., Finkelstein, I., & Shahack-Gross, R."`.
+
+**`markdown` cascade:** print-only `→ fallback_text`; aggregator `→ ⚠️[(domain — Title…)](url)`; Author + Year `→ [(Author-Label Year)](url)`; URL + Title without Author-Year `→ [(domain — Title…)](url)`; URL only `→ [(domain)](url)`; `audit.warn_marker` prepends `⚠️` to the link form.
 
 ## Authority overrides
 

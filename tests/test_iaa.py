@@ -254,7 +254,7 @@ def test_parse_page_extracts_matching_records() -> None:
     assert p.identifiers.iaa_pub_id == "atiqot/vol116/iss1/3"
     # Inline citation: DOI present → Author-Year against doi.org.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended == (
+    assert p.inline_citation.markdown == (
         "[(Cohen & Yisrael 2024)](https://doi.org/10.70967/2948-040X.1124)"
     )
     assert p.language == "en"
@@ -323,7 +323,7 @@ async def test_search_iaa_impl_happy_path() -> None:
     assert isinstance(p, DAOPaper)
     assert p.source == "iaa"
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended.startswith("[(Cohen & Yisrael 2024)]")
+    assert p.inline_citation.markdown.startswith("[(Cohen & Yisrael 2024)]")
 
 
 @pytest.mark.asyncio

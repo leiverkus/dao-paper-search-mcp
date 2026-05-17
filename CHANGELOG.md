@@ -7,6 +7,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-05-18
+
+Schema v2 — radical inline-citation simplification plus structural
+hallucination protection.
+
+**Why:** Four iterations of agent testing (2026-05-15) showed three
+divergent model behaviours on the v0.6.x multi-variant schema. Qwen
+3.5 122B copied fields verbatim and reflexively picked
+`markdown_domain` → `[(doi.org)](url)` instead of Author-Year.
+Ring 2.6 1T ignored the schema entirely and rendered Author-Year
+itself. Qwen 3.6 Plus mixed and matched. A Mistral Medium 3.5 run
+(2026-05-18) added a new failure mode: the agent assigned the same
+DOI to two different authors in one bibliography (`Aharoni 1976` vs.
+`Finkelstein 1999`, identical DOI/title/pages), reconstructing the
+author-year from training knowledge instead of the tool output.
+
+### Breaking — `InlineCitation` schema collapse
+
+Twelve fields removed:
+
+- `primary_url`, `display_domain`
+- `display_label_authoryear`, `display_label_domain`,
+  `display_label_domain_title`, `display_label_doi`
+- `markdown_authoryear`, `markdown_domain`, `markdown_domain_title`,
+  `markdown_doi`
+- `markdown_recommended`, `markdown_bibliography`
+
+Five fields remain:
+
+- `url` — the canonical link (replaces `primary_url`).
+- `markdown` — single context-sensitive Inline-Markdown link, cascade
+  Author-Year → Domain-Title → Domain → `fallback_text`, with
+  `⚠️`-prefix for aggregator and warn-flagged hits.
+- `authoritative_authors_label` (new) — plain-text Author-Year string
+  (`"Finkelstein 1999"`) so agents render their own form from
+  tool-authoritative data instead of training knowledge.
+- `authoritative_bibliography_line` (new) — full reference-list line
+  (`"Finkelstein, I. (1999). Title. *BASOR* 314, 55–70."`) for
+  verbatim copy into the bibliography section. `None` when venue
+  metadata is incomplete; in that case the agent must fall back to
+  Author-Year + URL/DOI rather than reconstructing.
+- `fallback_text` — unchanged.
+
+### Added — `Venue` sub-model
+
+New `models.Venue` (`name`, `volume`, `issue`, `pages`). Adapters
+populate it from their API response and `build_inline_citation()`
+threads it into `build_bibliography_line()`. All 10 adapters
+(crossref, openalex, semantic_scholar, arxiv, zenon, iaa, adaj, core,
+zenodo, biorxiv) pass `venue=...` to the builder.
+
+### Added — inline author-label rules
+
+- 1 author → `"Cohen 1979"`
+- 2 authors → `"Cohen & Yisrael 1995"`
+- 3 authors → `"Boaretto, Finkelstein & Shahack-Gross 2010"` (explicit,
+  no et al. — three names still fit comfortably and read cleanly in
+  prose)
+- ≥4 authors → `"Bruins et al. 2011"`
+- Particle names (`van der Plicht`, `von Daniken`) stay intact in both
+  inline and bibliography forms; new `_PARTICLES` whitelist preserves
+  multi-token family names across "Family, Given Particle" and
+  "Given Particle Family" author-string shapes.
+
+### Added — bibliography author rules
+
+Full family + initial form (no et al. in the bibliography). Oxford
+comma before the final `&`. Example:
+`"Boaretto, E., Finkelstein, I., & Shahack-Gross, R."`.
+
+### Tests
+
+268 passed (was 241). 36 new and migrated tests in
+`test_inline_citation.py` (single-author / two-author / three-author
+explicit / et al. / particle / aggregator / print-only / Test 5
+hallucination protection / venue cascade / authoritative label
+edge cases).
+
+### Title truncation
+
+`_TITLE_MAX_LEN` raised from 50 to 60 characters for the
+Domain-Title form (Briefing §II.B).
+
 ## [0.6.4] - 2026-05-15
 
 Total domain-field blackout for DOI hits. v0.6.3 hid

@@ -38,7 +38,8 @@ COHEN_1979_ITEM = {
     "language": "en",
 }
 
-# Multi-author Boaretto et al. 2010 Radiocarbon — realistic et-al case.
+# Multi-author Boaretto + Finkelstein + Shahack-Gross 2010 Radiocarbon
+# — exercises the explicit 3-author inline form added in Schema v2.
 BOARETTO_2010_ITEM = {
     "DOI": "10.1017/S0033822200044982",
     "type": "journal-article",
@@ -163,18 +164,26 @@ def test_item_to_paper_single_author_authoryear_form() -> None:
     assert p.identifiers is not None and p.identifiers.doi == "10.2307/1356668"
     # Inline citation — Author-Year form via DOI.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended == (
+    assert p.inline_citation.markdown == (
         "[(Cohen 1979)](https://doi.org/10.2307/1356668)"
     )
 
 
-def test_item_to_paper_three_authors_use_et_al() -> None:
+def test_item_to_paper_three_authors_explicit_inline_form() -> None:
+    """Schema v2: three authors are listed explicitly (no et al.)."""
     p = _item_to_paper(BOARETTO_2010_ITEM)
     assert p is not None
     assert len(p.authors) == 3
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended == (
-        "[(Boaretto et al. 2010)](https://doi.org/10.1017/S0033822200044982)"
+    assert p.inline_citation.markdown == (
+        "[(Boaretto, Finkelstein & Shahack-Gross 2010)]"
+        "(https://doi.org/10.1017/S0033822200044982)"
+    )
+    # Schema v2: structured bibliography line comes from Venue metadata.
+    assert p.inline_citation.authoritative_bibliography_line == (
+        "Boaretto, E., Finkelstein, I., & Shahack-Gross, R. (2010). "
+        "Radiocarbon Results from the Iron IIA Site of Atar Haroa in "
+        "the Negev Highlands. *Radiocarbon* 52(1), 1-12."
     )
     # JATS-stripped abstract.
     assert p.abstract is not None
@@ -208,7 +217,7 @@ async def test_search_crossref_impl_happy_path() -> None:
     assert isinstance(p, DAOPaper)
     assert p.source == "crossref"
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended.startswith("[(Cohen 1979)]")
+    assert p.inline_citation.markdown.startswith("[(Cohen 1979)]")
 
 
 @pytest.mark.asyncio

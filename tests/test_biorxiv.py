@@ -190,10 +190,10 @@ def test_record_to_paper_biorxiv_doi_form() -> None:
     assert p.abstract is not None
     assert "<em>" not in p.abstract
     assert "aDNA" in p.abstract
-    # Inline citation: 3 authors → et al. against DOI.
+    # Inline citation: 3 authors → explicit names (Schema v2).
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended == (
-        "[(Lazaridis et al. 2024)](https://doi.org/10.1101/2024.01.15.575707)"
+    assert p.inline_citation.markdown == (
+        "[(Lazaridis, Patterson & Reich 2024)](https://doi.org/10.1101/2024.01.15.575707)"
     )
 
 
@@ -209,8 +209,8 @@ def test_record_to_paper_without_doi_uses_epmc_landing() -> None:
     assert p.identifiers.doi is None
     assert p.identifiers.europepmc_id == "PPR648654"
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended == (
-        "[(Lazaridis et al. 2024)](https://europepmc.org/article/PPR/PPR648654)"
+    assert p.inline_citation.markdown == (
+        "[(Lazaridis, Patterson & Reich 2024)](https://europepmc.org/article/PPR/PPR648654)"
     )
 
 
@@ -239,7 +239,7 @@ async def test_search_biorxiv_impl_happy_path() -> None:
     assert isinstance(p, DAOPaper)
     assert p.source == "biorxiv"
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended.startswith("[(Lazaridis et al. 2024)]")
+    assert p.inline_citation.markdown.startswith("[(Lazaridis, Patterson & Reich 2024)]")
 
 
 @pytest.mark.asyncio

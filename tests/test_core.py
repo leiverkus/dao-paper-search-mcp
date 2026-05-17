@@ -140,7 +140,7 @@ def test_work_to_paper_doi_form() -> None:
     assert p.audit.warn_marker is False
     # Inline citation: DOI present → Author-Year against doi.org, no ⚠️.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended == (
+    assert p.inline_citation.markdown == (
         "[(Eliyahu-Behar & Freud 2024)](https://doi.org/10.1080/00758914.2024.2379655)"
     )
 
@@ -156,7 +156,7 @@ def test_work_to_paper_aggregator_flagged_with_warn() -> None:
     assert "aggregator=ResearchGate" in p.audit.verification_note
     # Inline citation: aggregator → ⚠️ + domain-title form (not Author-Year).
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended.startswith("⚠️[(core.ac.uk")
+    assert p.inline_citation.markdown.startswith("⚠️[(core.ac.uk")
 
 
 def test_work_to_paper_thesis_no_doi_uses_core_landing() -> None:
@@ -170,7 +170,7 @@ def test_work_to_paper_thesis_no_doi_uses_core_landing() -> None:
     assert p.verification_note == "document_type=thesis"
     # Author-Year form against CORE landing.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended == (
+    assert p.inline_citation.markdown == (
         "[(Researcher 2018)](https://core.ac.uk/works/5555444)"
     )
 
@@ -206,7 +206,7 @@ async def test_search_core_impl_happy_path(monkeypatch) -> None:
     assert isinstance(p, DAOPaper)
     assert p.source == "core"
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended.startswith("[(Eliyahu-Behar")
+    assert p.inline_citation.markdown.startswith("[(Eliyahu-Behar")
 
 
 @pytest.mark.asyncio

@@ -1,33 +1,31 @@
-"""Builder for the ``InlineCitation`` block on every ``DAOPaper``.
+"""Builder for the ``InlineCitation`` block on every ``DAOPaper`` (Schema v2).
 
-Pure function, no network I/O. Pre-renders multiple Markdown variants
-so the agent picks the form that fits its prose: Author-Year for body
-text, domain-plus-title for web references, domain-only for footnotes,
-DOI-string for bibliography entries. The agent copies the chosen
-variant verbatim.
+Pure function, no network I/O. Renders one canonical ``markdown`` field
+plus tool-authoritative bibliography strings the agent copies verbatim.
 
-Two **always-set, context-named** fields drive the typical render:
+Schema v2 collapses six prior ``markdown_*`` variants into a single
+``markdown`` field. The cascade is fixed:
 
-- ``markdown_recommended`` → body text (Author-Year by default)
-- ``markdown_bibliography`` → bibliography entries (DOI string by
-  default; falls back through Author-Year / Domain-Title / Domain /
-  plain text)
+    - No URL                       → ``fallback_text``
+    - ``audit.aggregator=True``    → Domain(-Title) form, ⚠️-prefixed
+      (the visible label must surface the aggregator domain regardless
+      of any author-year context, so the reader sees it's a secondary
+      hit)
+    - Authors + Year present       → Author-Year form (academic body text)
+    - URL but no Author-Year ctx   → Domain-Title form (web reference)
+    - Domain-only as last resort
+    - ``warn_marker=True``         → prepend ⚠️ (link forms only)
 
-Both pre-apply the ⚠️ prefix for aggregator / warn-flagged hits.
+Two tool-authoritative fields prevent DOI-consistent author-year
+hallucinations observed empirically (same DOI rendered with different
+authors in the same bibliography):
 
-Priority of ``primary_url``:
-    DOI > OpenAlex > Zenon > IAA > ADAJ > open_access_url > landing_page_url > None
+    - ``authoritative_authors_label``        — plain-text "Finkelstein 1999"
+    - ``authoritative_bibliography_line``    — full reference line
 
-``markdown_recommended`` heuristic (order matters):
-    - No URL                            → ``fallback_text``
-    - ``audit.aggregator=True``         → Domain(-Title) form, ⚠️-prefixed
-      (Google Books / ResearchGate / Academia: the visible label must
-      surface the aggregator domain so the reader sees it's a secondary
-      hit, regardless of any author-year context that might exist.)
-    - Authors + Year present            → Author-Year form (academic body text)
-    - URL but no Author-Year context    → Domain-Title form (web reference)
-    - Domain-only as last resort        → Domain form
-    - ``warn_marker=True``              → prepend ⚠️ (link forms only)
+Priority of ``url``:
+    DOI > OpenAlex > Zenon > IAA > ADAJ > arXiv > Semantic Scholar >
+    CORE > Europe PMC > open_access_url > landing_page_url > None
 """
 
 from __future__ import annotations
@@ -36,54 +34,239 @@ import re
 from typing import List, Optional
 from urllib.parse import urlparse
 
-from .models import Audit, Identifiers, InlineCitation
+from .models import Audit, Identifiers, InlineCitation, Venue
 
 
 _FAMILY_NAME_RE = re.compile(r"^([^,]+),")  # "Cohen, R." -> "Cohen"
-_TITLE_MAX_LEN = 50  # truncation threshold for the domain-title variant
+_TITLE_MAX_LEN = 60  # truncation threshold for the domain-title form (v2)
+
+# Family-name particles that must travel with the family name.
+# Lower-cased for matching; ordering does not matter.
+_PARTICLES = frozenset(
+    {"van", "von", "de", "der", "den", "del", "della", "di", "da", "le", "la", "el"}
+)
 
 
 def _family_name(author: str) -> str:
-    """Best-effort family-name extraction from one author string.
+    """Family-name extraction with particle preservation.
 
-    Handles ``"Cohen, R."`` (comma-first), ``"R. Cohen"`` (initial-first),
-    and bare ``"Cohen"``. Falls back to the whole string when unsure —
-    over-quoting beats wrong-quoting in a citation fallback.
+    Handles three shapes:
+
+    - ``"van der Plicht, J."``     → ``"van der Plicht"`` (default regex)
+    - ``"Plicht, J. van der"``     → ``"van der Plicht"`` (suffix particles
+      after given names are rejoined to the family name in their
+      original order)
+    - ``"J. van der Plicht"``      → ``"van der Plicht"`` (initial-first
+      with leading particle run)
+    - ``"Cohen"``                  → ``"Cohen"``
+
+    Falls back to the whole string when unsure — over-quoting beats
+    wrong-quoting in a citation fallback.
     """
     s = author.strip()
     m = _FAMILY_NAME_RE.match(s)
     if m:
-        return m.group(1).strip()
-    parts = s.split()
-    if len(parts) >= 2:
-        return parts[-1]
+        family = m.group(1).strip()
+        # Comma-style: check for trailing particles in the given-name tail
+        # ("Plicht, J. van der") and rejoin them as a prefix.
+        tail = s[m.end():].strip()
+        if tail:
+            tail_tokens = tail.replace(".", " ").split()
+            # Walk from the end collecting particles.
+            particles_suffix: List[str] = []
+            i = len(tail_tokens) - 1
+            while i >= 0 and tail_tokens[i].lower() in _PARTICLES:
+                particles_suffix.insert(0, tail_tokens[i])
+                i -= 1
+            if particles_suffix:
+                return " ".join([*particles_suffix, family])
+        return family
+    # No comma: try initial-first with leading particle run.
+    tokens = s.split()
+    if len(tokens) >= 2:
+        # First drop any leading initials/given-name initials (tokens that
+        # are a single letter or end with "."). What remains after that
+        # run is the family in initial-first style ("J. van der Plicht").
+        i = 0
+        while i < len(tokens) and (tokens[i].endswith(".") or len(tokens[i]) == 1):
+            i += 1
+        if i > 0 and i < len(tokens):
+            return " ".join(tokens[i:])
+        # No initials to drop — the input is "Given Family"-style with a
+        # spelled-out given name (e.g. "Itzhaq Beit-Arieh"). Fall back to
+        # the trailing word and any preceding particle run; that beats
+        # the over-quoting-the-whole-string behaviour, which spoils the
+        # inline label with given names.
+        j = len(tokens) - 1
+        while j > 0 and tokens[j - 1].lower() in _PARTICLES:
+            j -= 1
+        return " ".join(tokens[j:])
     return s
 
 
-def _authoryear_label(authors: List[str], year: Optional[int]) -> Optional[str]:
-    """Return ``"Cohen 1979"`` / ``"Cohen & Yisrael 1995"`` / ``"Cohen et al. 1979"``.
+def _format_author_label(authors: List[str], year: Optional[int]) -> Optional[str]:
+    """Inline Author-Year label for the ``markdown`` field.
 
-    Returns ``None`` when there's no usable author-year context — that
-    signals to the caller that the Author-Year variant should be skipped
-    and the domain-title form should win ``markdown_recommended`` instead.
+    Schema v2 rules:
+
+    - 0 authors           → ``None``
+    - 1 author            → ``"Cohen 1979"``
+    - 2 authors           → ``"Cohen & Yisrael 1995"``
+    - 3 authors           → ``"Boaretto, Finkelstein & Shahack-Gross 2010"``
+      (explicit, not et al. — three names still fit comfortably and
+      the form reads cleanly in prose)
+    - ≥4 authors          → ``"Boaretto et al. 2011"``
+
+    If ``year`` is ``None`` the year suffix is omitted; if both
+    ``authors`` and ``year`` are missing returns ``None``.
     """
-    if not authors or year is None:
+    if not authors and year is None:
         return None
-    if len(authors) >= 3:
-        head = f"{_family_name(authors[0])} et al."
-    elif len(authors) == 2:
-        head = f"{_family_name(authors[0])} & {_family_name(authors[1])}"
-    else:
+    if not authors:
+        # Year-only labels are useless inline; treat as no label.
+        return None
+
+    n = len(authors)
+    if n == 1:
         head = _family_name(authors[0])
+    elif n == 2:
+        head = f"{_family_name(authors[0])} & {_family_name(authors[1])}"
+    elif n == 3:
+        f1, f2, f3 = (_family_name(a) for a in authors[:3])
+        head = f"{f1}, {f2} & {f3}"
+    else:
+        head = f"{_family_name(authors[0])} et al."
+
+    if year is None:
+        return head
     return f"{head} {year}"
 
 
-def _format_fallback(authors: List[str], year: Optional[int], pages: Optional[str]) -> str:
-    """Author-Year form used when no link target exists.
+def _split_family_given(author: str) -> tuple[str, Optional[str]]:
+    """Split one author string into (family, given). ``given`` is ``None``
+    if not parseable.
 
-    The fallback must read like a normal in-text citation so prose stays
-    grammatical — this is the only string the agent prints when print-only
-    grey literature has no digital anchor.
+    Adapters are not consistent: Crossref delivers ``"Family, Given"``,
+    arXiv ``"Given Family"``, OpenAlex pre-flipped to comma form.
+    """
+    s = author.strip()
+    m = _FAMILY_NAME_RE.match(s)
+    if m:
+        family = m.group(1).strip()
+        # Particle suffix already folded by _family_name; for bibliography
+        # we need the given part separately. Strip trailing particle run.
+        rest_raw = s[m.end():].strip()
+        if rest_raw:
+            tokens = rest_raw.replace(".", " . ").split()
+            # Re-emit with original dots: split on whitespace, then re-add
+            # dots that were stuck to tokens.
+            tokens = [t for t in tokens if t]
+            # Drop trailing particles
+            while tokens and tokens[-1].lower() in _PARTICLES:
+                family = f"{tokens[-1]} {family}"
+                tokens.pop()
+            given = " ".join(tokens).replace(" .", ".") if tokens else None
+            return family, given
+        return family, None
+    tokens = s.split()
+    if len(tokens) >= 2:
+        # "J. van der Plicht" — given is leading initial run, family is rest
+        i = 0
+        while i < len(tokens) and (tokens[i].endswith(".") or len(tokens[i]) == 1):
+            i += 1
+        given = " ".join(tokens[:i]) if i > 0 else None
+        family = " ".join(tokens[i:]) if i < len(tokens) else tokens[-1]
+        return family, given
+    return s, None
+
+
+def _initial(given: str) -> str:
+    """Return ``"R."`` for ``"Roger"``, ``"R. M."`` for ``"Roger M."``.
+
+    Already-abbreviated forms (``"R."`` or ``"R. M."``) pass through.
+    Used by the bibliography-line author formatter only.
+    """
+    out_parts: List[str] = []
+    for tok in given.replace(".", " ").split():
+        if not tok:
+            continue
+        out_parts.append(f"{tok[0].upper()}.")
+    return " ".join(out_parts)
+
+
+def _format_one_author_bib(author: str) -> str:
+    """Bibliography form of one author: ``"Cohen, R."`` or bare
+    ``"Cohen"`` if no given name is parseable."""
+    family, given = _split_family_given(author)
+    if given:
+        return f"{family}, {_initial(given)}"
+    return family
+
+
+def _format_authors_full_bibliography(authors: List[str]) -> str:
+    """Full author list for a bibliography entry.
+
+    - 1 author          → ``"Cohen, R."``
+    - 2 authors         → ``"Cohen, R., & Yisrael, Y."``
+    - ≥3 authors        → ``"Boaretto, E., Finkelstein, I., & Shahack-Gross, R."``
+
+    Oxford comma before the ampersand. No ``et al.`` — the bibliography
+    section lists everyone; truncating belongs to the inline form.
+    """
+    if not authors:
+        return "Anon."
+    formatted = [_format_one_author_bib(a) for a in authors]
+    if len(formatted) == 1:
+        return formatted[0]
+    if len(formatted) == 2:
+        return f"{formatted[0]}, & {formatted[1]}"
+    head = ", ".join(formatted[:-1])
+    return f"{head}, & {formatted[-1]}"
+
+
+def build_bibliography_line(
+    authors: List[str],
+    year: Optional[int],
+    title: Optional[str],
+    venue: Optional[Venue],
+) -> Optional[str]:
+    """Render the full bibliography-entry line.
+
+    Format: ``"{Authors} ({Year}). {Title}. *{Venue}* {Vol}({Issue}), {Pages}."``
+
+    Returns ``None`` when authors or year are missing (the bibliography
+    needs both to be a stable reference) or when title is missing.
+    Vol/Issue/Pages are folded in defensively — each is omitted with
+    its surrounding punctuation when ``None``.
+    """
+    if not authors or year is None or not title:
+        return None
+
+    authors_str = _format_authors_full_bibliography(authors)
+    line = f"{authors_str} ({year}). {title.strip().rstrip('.')}."
+
+    if venue is None or not venue.name:
+        return line
+
+    line += f" *{venue.name}*"
+    if venue.volume:
+        line += f" {venue.volume}"
+        if venue.issue:
+            line += f"({venue.issue})"
+    if venue.pages:
+        line += f", {venue.pages}"
+    line += "."
+    return line
+
+
+def _format_fallback(authors: List[str], year: Optional[int], pages: Optional[str]) -> str:
+    """Author-Year-page form for print-only hits with no link target.
+
+    Deliberately divergent from ``_format_author_label``: this is the
+    string the agent prints bare in prose, so the compact ``"et al."``
+    form is preferred over a three-name list — the reader does not have
+    a hyperlink to pivot to and we are trying to keep the inline
+    citation short.
     """
     if not authors:
         head = "Anon."
@@ -174,6 +357,53 @@ def _pick_primary_url(
     return None
 
 
+def render_markdown(
+    *,
+    authors: List[str],
+    year: Optional[int],
+    title: Optional[str],
+    primary_url: Optional[str],
+    audit: Audit,
+    fallback_text: str,
+) -> str:
+    """Render the single ``markdown`` field per the v2 cascade.
+
+    See module docstring for the full ordering. The ⚠️-prefix attaches
+    only to link forms; print-only fallback prose stays unmarked.
+    """
+    if primary_url is None:
+        return fallback_text
+
+    domain = _display_domain(primary_url)
+    author_label = _format_author_label(authors, year)
+    trunc_title = _truncate_title(title) if title else None
+
+    if audit.aggregator:
+        # Aggregator hits surface the domain in the label so readers see
+        # the hit is secondary, even when author-year is available.
+        if trunc_title:
+            body = f"[({domain} — {trunc_title})]({primary_url})"
+        else:
+            body = f"[({domain})]({primary_url})"
+        return f"⚠️{body}"
+
+    # Author-Year branch requires *both* authors and year. A bare
+    # "[(Cohen)]" without a year is a worse inline citation than the
+    # Domain-Title form, which at least tells the reader what the work
+    # is. The ``authoritative_authors_label`` field still surfaces the
+    # year-less label for callers that want it.
+    if author_label is not None and year is not None and authors:
+        body = f"[({author_label})]({primary_url})"
+    elif trunc_title is not None:
+        body = f"[({domain} — {trunc_title})]({primary_url})"
+    else:
+        body = f"[({domain})]({primary_url})"
+
+    if audit.warn_marker:
+        return f"⚠️{body}"
+    return body
+
+
 def build_inline_citation(
     *,
     authors: List[str],
@@ -184,127 +414,25 @@ def build_inline_citation(
     landing_page_url: Optional[str],
     open_access_url: Optional[str],
     audit: Audit,
+    venue: Optional[Venue] = None,
 ) -> InlineCitation:
     fallback_text = _format_fallback(authors, year, pages)
     primary_url = _pick_primary_url(identifiers, landing_page_url, open_access_url)
-
-    if primary_url is None:
-        # No link target — the agent must print the Author-Year string
-        # bare; ⚠️-prefix does not attach to non-link prose. Both
-        # context fields collapse to the same plain text.
-        return InlineCitation(
-            primary_url=None,
-            display_domain=None,
-            markdown_recommended=fallback_text,
-            markdown_bibliography=fallback_text,
-            fallback_text=fallback_text,
-        )
-
-    domain = _display_domain(primary_url)
-    ay_label = _authoryear_label(authors, year)
-    trunc_title = _truncate_title(title) if title else None
-
-    # Build the three variants. Each is either a finished string or
-    # ``None`` when the underlying labels aren't available.
-    markdown_authoryear = (
-        f"[({ay_label})]({primary_url})" if ay_label else None
+    authoritative_authors_label = _format_author_label(authors, year)
+    authoritative_bibliography_line = build_bibliography_line(authors, year, title, venue)
+    markdown = render_markdown(
+        authors=authors,
+        year=year,
+        title=title,
+        primary_url=primary_url,
+        audit=audit,
+        fallback_text=fallback_text,
     )
-    # Internal full form — used inside the cascade as a last-resort
-    # fallback. Public exposure of ``markdown_domain`` is restricted
-    # below: when a DOI is registered, ``[(doi.org)]`` is uninformative
-    # noise (the more useful Author-Year and DOI-string variants are
-    # already exposed) and empirical agent runs show models prefer this
-    # field over the context-named pflichtfelds, defeating their
-    # purpose. So we hide it for DOI hits.
-    _markdown_domain_full = f"[({domain})]({primary_url})"
-    markdown_domain_title = (
-        f"[({domain} — {trunc_title})]({primary_url})" if trunc_title else None
-    )
-    # DOI variant — only when a DOI is present. The label shows the
-    # actual DOI string so bibliography entries surface it directly,
-    # which is what readers want for cross-reference and BibTeX
-    # round-tripping. The URL still resolves via doi.org.
-    markdown_doi = (
-        f"[({identifiers.doi})]({primary_url})" if identifiers.doi else None
-    )
-
-    display_label_authoryear = ay_label
-    display_label_domain = domain
-    display_label_domain_title = (
-        f"{domain} — {trunc_title}" if trunc_title else None
-    )
-    display_label_doi = identifiers.doi if identifiers.doi else None
-
-    # Heuristic for the agent's first-choice variant.
-    # Aggregator hits override author-year because the reader must see
-    # the aggregator domain in the label; academic hits use Author-Year
-    # body-text form; web hits without author-year fall back to
-    # Domain-Title; domain-only is the last resort.
-    if audit.aggregator:
-        markdown_recommended = markdown_domain_title or _markdown_domain_full
-    elif markdown_authoryear is not None:
-        markdown_recommended = markdown_authoryear
-    elif markdown_domain_title is not None:
-        markdown_recommended = markdown_domain_title
-    else:
-        markdown_recommended = _markdown_domain_full
-
-    # Bibliography variant: prefer the DOI form so the visible label is
-    # the actual DOI string (what scholarly readers expect for
-    # cross-reference and BibTeX round-tripping). Cascade gracefully
-    # through Author-Year, Domain-Title, Domain-only when no DOI.
-    # Aggregator hits override the DOI preference because surfacing the
-    # aggregator domain is more important than the DOI in those cases.
-    if audit.aggregator:
-        markdown_bibliography = markdown_domain_title or _markdown_domain_full
-    elif markdown_doi is not None:
-        markdown_bibliography = markdown_doi
-    elif markdown_authoryear is not None:
-        markdown_bibliography = markdown_authoryear
-    elif markdown_domain_title is not None:
-        markdown_bibliography = markdown_domain_title
-    else:
-        markdown_bibliography = _markdown_domain_full
-
-    if audit.warn_marker or audit.aggregator:
-        markdown_recommended = f"⚠️{markdown_recommended}"
-        markdown_bibliography = f"⚠️{markdown_bibliography}"
-
-    # When a DOI is registered, hide *all* domain-revealing fields from
-    # public exposure. v0.6.3 hid markdown_domain and display_label_domain
-    # but the agent kept rendering ``[(doi.org)](url)`` in bibliography
-    # entries — apparently constructing the label from the still-exposed
-    # ``display_domain`` ("doi.org") and ``markdown_domain_title``
-    # ("[(doi.org — Title)](url)") fields. v0.6.4 removes those too.
-    # After this: for DOI hits the only domain-style information left
-    # is parseable from ``primary_url`` itself, which is harder for the
-    # agent to reach reflexively. The exposed alternatives all carry
-    # useful information (Author-Year, DOI-string).
-    if identifiers.doi:
-        public_display_domain: Optional[str] = None
-        public_display_label_domain = None
-        public_display_label_domain_title = None
-        public_markdown_domain = None
-        public_markdown_domain_title = None
-    else:
-        public_display_domain = domain
-        public_display_label_domain = display_label_domain
-        public_display_label_domain_title = display_label_domain_title
-        public_markdown_domain = _markdown_domain_full
-        public_markdown_domain_title = markdown_domain_title
 
     return InlineCitation(
-        primary_url=primary_url,  # type: ignore[arg-type]
-        display_domain=public_display_domain,
-        display_label_authoryear=display_label_authoryear,
-        display_label_domain=public_display_label_domain,
-        display_label_domain_title=public_display_label_domain_title,
-        display_label_doi=display_label_doi,
-        markdown_authoryear=markdown_authoryear,
-        markdown_domain=public_markdown_domain,
-        markdown_domain_title=public_markdown_domain_title,
-        markdown_doi=markdown_doi,
-        markdown_recommended=markdown_recommended,
-        markdown_bibliography=markdown_bibliography,
+        url=primary_url,  # type: ignore[arg-type]
+        markdown=markdown,
+        authoritative_authors_label=authoritative_authors_label,
+        authoritative_bibliography_line=authoritative_bibliography_line,
         fallback_text=fallback_text,
     )

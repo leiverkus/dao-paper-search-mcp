@@ -40,7 +40,7 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
-from ..models import Audit, DAOPaper, Identifiers, PublicationStatus
+from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
 
 log = logging.getLogger(__name__)
 
@@ -176,6 +176,13 @@ def _entry_to_paper(entry: ET.Element) -> Optional[DAOPaper]:
 
     identifiers = Identifiers(doi=doi, arxiv_id=arxiv_id)
     audit = Audit(primary_source=True, aggregator=False, warn_marker=False)
+    # arXiv ``journal_ref`` is unstructured ("J. Cosmol. 5 (2019) 12-34"
+    # style); parsing it reliably is brittle, so we surface only the raw
+    # string as ``Venue.name`` and let volume/issue/pages stay None.
+    # Bibliography lines will read as "Author (Year). Title. *journal_ref*."
+    # — accurate enough for preprints, and the agent has the full
+    # ``journal_or_volume`` field to fall back on.
+    venue = Venue(name=journal_ref) if journal_ref else None
     inline_citation = build_inline_citation(
         authors=authors,
         year=year,
@@ -185,6 +192,7 @@ def _entry_to_paper(entry: ET.Element) -> Optional[DAOPaper]:
         landing_page_url=landing_page_url,
         open_access_url=pdf_url,
         audit=audit,
+        venue=venue,
     )
 
     return DAOPaper(
@@ -320,18 +328,14 @@ def register(mcp: FastMCP) -> None:
             "cat:cs.AI RAG"           → unchanged
             "au:cohen ti:negev"       → unchanged
 
-        Citation rendering: each returned ``DAOPaper`` carries an
-        ``inline_citation`` block with pre-rendered Markdown. Copy
-        ``inline_citation.markdown_recommended`` verbatim when citing
-        a hit — do not reformat to ``[(domain)](url)``. For preprints
-        that gained a journal DOI later, the recommended form points
-        at ``doi.org``; for preprint-only hits, it points at
-        ``arxiv.org``. For bibliography or reference-list entries, copy
-        ``inline_citation.markdown_bibliography`` verbatim — it's
-        always set and prefers the DOI string in the visible label
-        when a DOI is registered (falls back gracefully to
-        Author-Year / Domain-Title / plain text otherwise). This is
-        the bibliography counterpart to ``markdown_recommended``.
+        Citation rendering (Schema v2): each returned ``DAOPaper``
+        carries an ``inline_citation`` block. Copy
+        ``inline_citation.markdown`` verbatim for in-text citations —
+        do not reformat. For the bibliography / reference-list section
+        copy ``inline_citation.authoritative_bibliography_line``
+        verbatim; if it is ``None`` (venue metadata incomplete) fall
+        back to Author-Year + URL/DOI rather than reconstructing the
+        reference line from training knowledge.
 
         Args:
             query: search_query in arXiv's Lucene syntax (or free text

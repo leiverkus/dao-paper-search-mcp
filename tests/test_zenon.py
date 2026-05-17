@@ -140,13 +140,13 @@ async def test_search_zenon_impl_happy_path() -> None:
     # Briefing Iteration 2 / gazetteer integration: DAILinks.gazetteer
     # is automatically promoted into site_ids as ``gazetteer:<gazId>``.
     assert "gazetteer:2043520" in p.site_ids
-    # Inline-citation integration: builder ran, picked the Author-Year
-    # variant as ``markdown_recommended`` (academic hit with year), and
-    # populated the alternate variants.
+    # Inline-citation integration: Schema v2 renders Author-Year form
+    # via the canonical zenon URL when no DOI is available.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended.startswith("[(Beit-Arieh")
-    assert p.inline_citation.markdown_domain is not None
-    assert p.inline_citation.markdown_domain.startswith("[(zenon.dainst.org)]")
+    assert p.inline_citation.markdown.startswith("[(Beit-Arieh & Beck 1995)]")
+    assert str(p.inline_citation.url) == (
+        "https://zenon.dainst.org/Record/001388596"
+    )
     assert p.identifiers is not None
     assert p.identifiers.zenon_id == "001388596"
 

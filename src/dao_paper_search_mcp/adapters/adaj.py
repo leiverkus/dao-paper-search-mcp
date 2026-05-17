@@ -26,7 +26,7 @@ from bs4 import BeautifulSoup, Tag
 from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
-from ..models import Audit, DAOPaper, Identifiers, PublicationStatus
+from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
 
 log = logging.getLogger(__name__)
 
@@ -117,6 +117,19 @@ def _parse_result_tag(tag: Tag) -> Optional[DAOPaper]:
         verification_note=note,
         warn_marker=bool(note),
     )
+    # The DoA portal exposes the parent publication as a single string
+    # ("Annual of the Department of Antiquities of Jordan, vol. 56" or
+    # "SHAJ XIV"). Parse a trailing volume token if present; otherwise
+    # leave volume unset and use the full string as Venue.name.
+    venue: Optional[Venue] = None
+    if journal:
+        v_name = journal
+        v_volume: Optional[str] = None
+        m_vol = re.search(r"(?:vol\.?\s*|volume\s+)([A-Za-z0-9]+)$", journal, re.I)
+        if m_vol:
+            v_volume = m_vol.group(1)
+            v_name = journal[: m_vol.start()].rstrip(" ,.")
+        venue = Venue(name=v_name or None, volume=v_volume, pages=pages)
     inline_citation = build_inline_citation(
         authors=authors,
         year=year,
@@ -126,6 +139,7 @@ def _parse_result_tag(tag: Tag) -> Optional[DAOPaper]:
         landing_page_url=landing,
         open_access_url=pdf_url,
         audit=audit,
+        venue=venue,
     )
 
     return DAOPaper(
@@ -223,17 +237,14 @@ def register(mcp: FastMCP) -> None:
         (the upstream GET search ignores year parameters). Narrow your query
         keywords if year filtering yields too few hits.
 
-        Citation rendering: each returned ``DAOPaper`` carries an
-        ``inline_citation`` block with pre-rendered Markdown. Copy
-        ``inline_citation.markdown_recommended`` verbatim when citing a
-        hit — do not reformat to ``[(domain)](url)``. Use
-        ``inline_citation.fallback_text`` only when ``primary_url`` is
-        ``null``. For bibliography or reference-list entries, copy
-        ``inline_citation.markdown_bibliography`` verbatim — it's
-        always set and prefers the DOI string in the visible label
-        when a DOI is registered (falls back gracefully to
-        Author-Year / Domain-Title / plain text otherwise). This is
-        the bibliography counterpart to ``markdown_recommended``.
+        Citation rendering (Schema v2): each returned ``DAOPaper``
+        carries an ``inline_citation`` block. Copy
+        ``inline_citation.markdown`` verbatim for in-text citations —
+        do not reformat. For the bibliography / reference-list section
+        copy ``inline_citation.authoritative_bibliography_line``
+        verbatim; if it is ``None`` (venue metadata incomplete) fall
+        back to Author-Year + URL/DOI rather than reconstructing the
+        reference line from training knowledge.
 
         Args:
             query: free-text query (e.g. ``"Negev fortresses"``).

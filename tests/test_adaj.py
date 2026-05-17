@@ -64,7 +64,7 @@ def test_parse_results_first_hit_shape() -> None:
     assert "SHAJ" in (p.journal_or_volume or "") or "Studies" in (p.journal_or_volume or "")
     # Inline-citation integration: Author-Year recommended form.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended.startswith("[(Beit-Arieh 2009)]")
+    assert p.inline_citation.markdown.startswith("[(Beit-Arieh 2009)]")
     assert p.identifiers is not None
     assert p.identifiers.adaj_id == "chapter:212"
 

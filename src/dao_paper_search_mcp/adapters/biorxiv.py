@@ -33,7 +33,7 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
-from ..models import Audit, DAOPaper, Identifiers, PublicationStatus
+from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
 
 log = logging.getLogger(__name__)
 
@@ -179,6 +179,12 @@ def _record_to_paper(record: Mapping[str, Any]) -> Optional[DAOPaper]:
 
     identifiers = Identifiers(doi=doi, europepmc_id=epmc_id)
     audit = Audit(primary_source=True, aggregator=False, warn_marker=False)
+    # Preprint records have a journal name (always "bioRxiv" or
+    # "medRxiv") and a pubYear, but no formal volume/issue/page numbers.
+    # Surface the name only.
+    venue: Optional[Venue] = None
+    if journal:
+        venue = Venue(name=journal)
     inline_citation = build_inline_citation(
         authors=authors,
         year=year,
@@ -188,6 +194,7 @@ def _record_to_paper(record: Mapping[str, Any]) -> Optional[DAOPaper]:
         landing_page_url=landing_page_url,
         open_access_url=open_access_url,
         audit=audit,
+        venue=venue,
     )
 
     return DAOPaper(
@@ -309,15 +316,14 @@ def register(mcp: FastMCP) -> None:
         almost always use the Author-Year form against ``doi.org``.
         ``publication_status`` is always ``PREPRINT``.
 
-        Citation rendering: each returned ``DAOPaper`` carries an
-        ``inline_citation`` block with pre-rendered Markdown. Copy
-        ``inline_citation.markdown_recommended`` verbatim — do not
-        reformat to ``[(domain)](url)``. For bibliography or reference-list entries, copy
-        ``inline_citation.markdown_bibliography`` verbatim — it's
-        always set and prefers the DOI string in the visible label
-        when a DOI is registered (falls back gracefully to
-        Author-Year / Domain-Title / plain text otherwise). This is
-        the bibliography counterpart to ``markdown_recommended``.
+        Citation rendering (Schema v2): each returned ``DAOPaper``
+        carries an ``inline_citation`` block. Copy
+        ``inline_citation.markdown`` verbatim for in-text citations —
+        do not reformat. For the bibliography / reference-list section
+        copy ``inline_citation.authoritative_bibliography_line``
+        verbatim; if it is ``None`` (venue metadata incomplete) fall
+        back to Author-Year + URL/DOI rather than reconstructing the
+        reference line from training knowledge.
 
         Args:
             query: free-text search (Lucene-style operators ``AND``/

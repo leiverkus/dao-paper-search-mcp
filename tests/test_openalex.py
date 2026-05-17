@@ -168,7 +168,7 @@ def test_work_to_paper_doi_form() -> None:
     assert p.abstract == "Iron Age fortresses in the Negev"
     # Inline citation: DOI present → Author-Year against doi.org.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended == (
+    assert p.inline_citation.markdown == (
         "[(Cohen 1979)](https://doi.org/10.2307/1356668)"
     )
 
@@ -186,7 +186,7 @@ def test_work_to_paper_no_doi_falls_back_to_openalex_landing() -> None:
     assert str(p.open_access_url) == "https://example.org/oa.pdf"
     # Inline citation: no DOI → Author-Year against openalex.org URL.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended == (
+    assert p.inline_citation.markdown == (
         "[(Yisrael & Beit-Arieh 2022)](https://openalex.org/W9999000001)"
     )
 
@@ -215,7 +215,7 @@ async def test_search_openalex_impl_happy_path() -> None:
     assert isinstance(p, DAOPaper)
     assert p.source == "openalex"
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended.startswith("[(Cohen 1979)]")
+    assert p.inline_citation.markdown.startswith("[(Cohen 1979)]")
 
 
 @pytest.mark.asyncio

@@ -37,7 +37,7 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
-from ..models import Audit, DAOPaper, Identifiers, PublicationStatus
+from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
 
 log = logging.getLogger(__name__)
 
@@ -117,6 +117,28 @@ def _format_pages(paper: Mapping[str, Any]) -> Optional[str]:
         pages = (journal.get("pages") or "").strip()
         return pages or None
     return None
+
+
+def _build_venue(paper: Mapping[str, Any]) -> Optional[Venue]:
+    """Map S2 ``journal`` / ``venue`` into structured Venue.
+
+    Issue is not exposed in S2's payload — only name/volume/pages. The
+    free-text ``venue`` (conferences, grey literature) becomes the name
+    when no structured ``journal`` is present.
+    """
+    journal = paper.get("journal") or {}
+    name: Optional[str] = None
+    volume: Optional[str] = None
+    pages: Optional[str] = None
+    if isinstance(journal, dict):
+        name = (journal.get("name") or "").strip() or None
+        volume = (journal.get("volume") or "").strip() or None
+        pages = (journal.get("pages") or "").strip() or None
+    if not name:
+        name = (paper.get("venue") or "").strip() or None
+    if not any((name, volume, pages)):
+        return None
+    return Venue(name=name, volume=volume, issue=None, pages=pages)
 
 
 def _publication_status(paper: Mapping[str, Any]) -> PublicationStatus:
@@ -214,6 +236,7 @@ def _paper_to_paper(paper: Mapping[str, Any]) -> Optional[DAOPaper]:
         landing_page_url=landing_page_url,
         open_access_url=open_access_url,
         audit=audit,
+        venue=_build_venue(paper),
     )
 
     return DAOPaper(
@@ -313,18 +336,14 @@ def register(mcp: FastMCP) -> None:
         Citation counts are exposed in ``verification_note`` (string
         ``"citation_count=N"``) as a soft ranking signal.
 
-        Citation rendering: each returned ``DAOPaper`` carries an
-        ``inline_citation`` block with pre-rendered Markdown. Copy
-        ``inline_citation.markdown_recommended`` verbatim when citing
-        a hit — do not reformat to ``[(domain)](url)``. For DOI hits
-        the recommended form is ``[(Author Year)](doi.org/…)``; for
-        ArXiv-only hits it falls back to ``arxiv.org``; for everything
-        else, the Semantic Scholar landing page. For bibliography or reference-list entries, copy
-        ``inline_citation.markdown_bibliography`` verbatim — it's
-        always set and prefers the DOI string in the visible label
-        when a DOI is registered (falls back gracefully to
-        Author-Year / Domain-Title / plain text otherwise). This is
-        the bibliography counterpart to ``markdown_recommended``.
+        Citation rendering (Schema v2): each returned ``DAOPaper``
+        carries an ``inline_citation`` block. Copy
+        ``inline_citation.markdown`` verbatim for in-text citations —
+        do not reformat. For the bibliography / reference-list section
+        copy ``inline_citation.authoritative_bibliography_line``
+        verbatim; if it is ``None`` (venue metadata incomplete) fall
+        back to Author-Year + URL/DOI rather than reconstructing the
+        reference line from training knowledge.
 
         Set ``SEMANTIC_SCHOLAR_API_KEY`` in the environment for higher
         rate limits — the tool works without one but is throttled to

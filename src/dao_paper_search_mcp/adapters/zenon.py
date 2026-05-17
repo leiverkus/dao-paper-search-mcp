@@ -35,7 +35,7 @@ from mcp.server.fastmcp import FastMCP
 import re
 
 from ..inline_citation import build_inline_citation
-from ..models import Audit, DAOPaper, Identifiers, PublicationStatus
+from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
 from ..resolvers.gazetteer import site_id_tokens_from_zenon_record
 
 log = logging.getLogger(__name__)
@@ -186,6 +186,17 @@ def _record_to_paper(record: Mapping[str, Any]) -> DAOPaper:
     landing_page_url = _build_landing_url(record)
     identifiers = Identifiers(doi=_extract_doi(record), zenon_id=zenon_id)
     audit = Audit(primary_source=True, aggregator=False, warn_marker=False)
+    # Zenon series block carries the closest thing to a journal name +
+    # volume — surface it as Venue.name + Venue.volume. Issue and pages
+    # aren't structurally exposed in the VuFind API response.
+    series = record.get("series") or []
+    venue: Optional[Venue] = None
+    if series:
+        s0 = series[0]
+        v_name = (s0.get("name") or "").strip().rstrip(",;:") or None
+        v_volume = (s0.get("number") or "").strip() or None
+        if v_name or v_volume:
+            venue = Venue(name=v_name, volume=v_volume)
     inline_citation = build_inline_citation(
         authors=authors,
         year=year,
@@ -195,6 +206,7 @@ def _record_to_paper(record: Mapping[str, Any]) -> DAOPaper:
         landing_page_url=landing_page_url,
         open_access_url=open_access_url,
         audit=audit,
+        venue=venue,
     )
 
     return DAOPaper(
@@ -286,19 +298,14 @@ def register(mcp: FastMCP) -> None:
         bibliography (~1M records, multilingual). Best for German-language Levant
         archaeology, classical antiquity, and DAI publication series.
 
-        Citation rendering: each returned ``DAOPaper`` carries an
-        ``inline_citation`` block with pre-rendered Markdown. When citing a
-        hit in body text, copy ``inline_citation.markdown_recommended``
-        verbatim — it already encodes the canonical URL, the Author-Year
-        label, and any ⚠️ warning prefix. Do not reformat to
-        ``[(domain)](url)`` or any other shape. Use
-        ``inline_citation.fallback_text`` only when ``primary_url`` is
-        ``null`` (print-only literature). For bibliography or reference-list entries, copy
-        ``inline_citation.markdown_bibliography`` verbatim — it's
-        always set and prefers the DOI string in the visible label
-        when a DOI is registered (falls back gracefully to
-        Author-Year / Domain-Title / plain text otherwise). This is
-        the bibliography counterpart to ``markdown_recommended``.
+        Citation rendering (Schema v2): each returned ``DAOPaper``
+        carries an ``inline_citation`` block. Copy
+        ``inline_citation.markdown`` verbatim for in-text citations —
+        do not reformat. For the bibliography / reference-list section
+        copy ``inline_citation.authoritative_bibliography_line``
+        verbatim; if it is ``None`` (venue metadata incomplete) fall
+        back to Author-Year + URL/DOI rather than reconstructing the
+        reference line from training knowledge.
 
         Args:
             query: free-text keyword query (CQL-style boolean operators

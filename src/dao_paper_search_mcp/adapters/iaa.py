@@ -53,7 +53,7 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
-from ..models import Audit, DAOPaper, Identifiers, PublicationStatus
+from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
 
 log = logging.getLogger(__name__)
 
@@ -198,6 +198,47 @@ def _pub_id_from_landing(landing_url: Optional[str]) -> Optional[str]:
     return None
 
 
+# Series-slug → human-readable journal/series title used by the
+# bibliography line renderer. IAA's OAI feed exposes the series only
+# through the publication path; everything else (volume, issue) is in
+# the same path segments.
+_IAA_SERIES_TITLES = {
+    "atiqot": "‘Atiqot",
+    "ha_esi_bilingual_series": "Hadashot Arkheologiyot – ESI",
+    "ha_hebrew_series": "חדשות ארכיאולוגיות",
+    "esi_english_series": "Excavations and Surveys in Israel",
+    "iaabookseries": "IAA Reports",
+}
+
+_IAA_VOL_ISS_RE = re.compile(r"vol(?P<vol>[A-Za-z0-9]+)(?:/iss(?P<iss>[A-Za-z0-9]+))?")
+
+
+def _build_venue(landing_url: Optional[str]) -> Optional[Venue]:
+    """Derive Venue from the IAA landing URL.
+
+    Example: ``atiqot/vol112/iss1/1`` → name="‘Atiqot", volume="112",
+    issue="1". IAA articles do not expose page numbers structurally —
+    the OAI record carries only Dublin Core, where pagination is
+    inconsistent at best.
+    """
+    pub_id = _pub_id_from_landing(landing_url)
+    if not pub_id:
+        return None
+    parts = pub_id.split("/", 1)
+    slug = parts[0]
+    name = _IAA_SERIES_TITLES.get(slug)
+    volume: Optional[str] = None
+    issue: Optional[str] = None
+    if len(parts) > 1:
+        m = _IAA_VOL_ISS_RE.search(parts[1])
+        if m:
+            volume = m.group("vol")
+            issue = m.group("iss")
+    if not any((name, volume, issue)):
+        return None
+    return Venue(name=name, volume=volume, issue=issue)
+
+
 def _extract_year(date_text: Optional[str]) -> Optional[int]:
     """``2024-11-26T10:12:05Z`` → 2024. Also tolerates bare YYYY."""
     if not date_text:
@@ -317,6 +358,7 @@ def _record_to_paper(record: ET.Element, tokens: list[str]) -> Optional[DAOPaper
         landing_page_url=landing_url,
         open_access_url=pdf_url,
         audit=audit,
+        venue=_build_venue(landing_url),
     )
 
     return DAOPaper(
@@ -472,17 +514,14 @@ def register(mcp: FastMCP) -> None:
         applies: when exhausted, partial matches are returned with a
         warning logged (better than a timeout error).
 
-        Citation rendering: every record carries an ``inline_citation``
-        block with pre-rendered Markdown. Copy
-        ``inline_citation.markdown_recommended`` verbatim — do not
-        reformat to ``[(domain)](url)``. Almost every IAA record has a
-        DOI, so the recommended form is ``[(Author Year)](doi.org/…)``.
-        For bibliography or reference-list entries, copy
-        ``inline_citation.markdown_bibliography`` verbatim — it's
-        always set and prefers the DOI string in the visible label
-        when a DOI is registered (falls back gracefully to
-        Author-Year / Domain-Title / plain text otherwise). This is
-        the bibliography counterpart to ``markdown_recommended``.
+        Citation rendering (Schema v2): each returned ``DAOPaper``
+        carries an ``inline_citation`` block. Copy
+        ``inline_citation.markdown`` verbatim for in-text citations —
+        do not reformat. For the bibliography / reference-list section
+        copy ``inline_citation.authoritative_bibliography_line``
+        verbatim; if it is ``None`` (venue metadata incomplete) fall
+        back to Author-Year + URL/DOI rather than reconstructing the
+        reference line from training knowledge.
 
         Args:
             query: free-text query. Tokens are AND-matched against

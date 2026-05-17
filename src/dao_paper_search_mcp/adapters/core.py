@@ -34,7 +34,7 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
-from ..models import Audit, DAOPaper, Identifiers, PublicationStatus
+from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
 
 log = logging.getLogger(__name__)
 
@@ -189,6 +189,17 @@ def _work_to_paper(work: Mapping[str, Any]) -> Optional[DAOPaper]:
         verification_note=verification_note,
         warn_marker=aggregator,
     )
+    # CORE aggregates repository content; only ``journals[0].title`` is
+    # ever structurally exposed. Volume/issue/pages are not reliably
+    # carried, so we set name-only Venue when a journal is present.
+    journals = work.get("journals") or []
+    venue: Optional[Venue] = None
+    if isinstance(journals, list) and journals:
+        j0 = journals[0]
+        if isinstance(j0, dict):
+            jt = (j0.get("title") or "").strip() or None
+            if jt:
+                venue = Venue(name=jt)
     inline_citation = build_inline_citation(
         authors=authors,
         year=year,
@@ -198,6 +209,7 @@ def _work_to_paper(work: Mapping[str, Any]) -> Optional[DAOPaper]:
         landing_page_url=landing_page_url,
         open_access_url=open_access_url,
         audit=audit,
+        venue=venue,
     )
 
     return DAOPaper(
@@ -301,18 +313,17 @@ def register(mcp: FastMCP) -> None:
         Requires a free API key in the ``CORE_API_KEY`` environment
         variable; register at https://core.ac.uk/services/api.
 
-        Citation rendering: each returned ``DAOPaper`` carries an
-        ``inline_citation`` block with pre-rendered Markdown. Copy
-        ``inline_citation.markdown_recommended`` verbatim when citing
-        a hit — do not reformat. CORE hits sourced from aggregators
+        Citation rendering (Schema v2): each returned ``DAOPaper``
+        carries an ``inline_citation`` block. Copy
+        ``inline_citation.markdown`` verbatim for in-text citations —
+        do not reformat. CORE hits sourced from aggregators
         (ResearchGate, Academia.edu, Google Books) are flagged with
-        ``audit.aggregator=True``; their markdown_recommended will
-        already carry a ⚠️ prefix. For bibliography or reference-list entries, copy
-        ``inline_citation.markdown_bibliography`` verbatim — it's
-        always set and prefers the DOI string in the visible label
-        when a DOI is registered (falls back gracefully to
-        Author-Year / Domain-Title / plain text otherwise). This is
-        the bibliography counterpart to ``markdown_recommended``.
+        ``audit.aggregator=True`` and their ``markdown`` already carries
+        a ⚠️ prefix. For bibliography / reference-list entries copy
+        ``inline_citation.authoritative_bibliography_line`` verbatim —
+        if it is ``None`` (incomplete venue metadata), fall back to
+        Author-Year + URL/DOI rather than reconstructing the line from
+        training knowledge.
 
         Args:
             query: free-text search query.

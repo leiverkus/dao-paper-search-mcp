@@ -104,59 +104,70 @@ class Audit(BaseModel):
     warn_marker: bool = False
 
 
-class InlineCitation(BaseModel):
-    """Pre-rendered citation strings the agent copies verbatim.
+class Venue(BaseModel):
+    """Bibliographic venue metadata for assembling reference-list entries.
 
-    Output-shape lock-in: by handing the agent ready Markdown, we
-    structurally enforce AGENTS.md's inline-link rule instead of
-    relying on prompt-side guidance. Multiple variants are exposed
-    because the agent picks the variant that fits its surrounding
-    prose:
-
-    - **Body text:** ``markdown_recommended`` (defaults to Author-Year
-      form). For DOI hits this is ``[(Cohen 1979)](doi.org/…)``.
-    - **Bibliography / reference-list entries:** ``markdown_bibliography``
-      (always set). For DOI hits this is the DOI string in the visible
-      label: ``[(10.1179/tav.1984.1984.2.189)](doi.org/…)``. Falls back
-      gracefully through Author-Year, Domain-Title, Domain-only, then
-      plain text when no link target exists.
-    - **Web references / domain-anchored citations** (non-DOI hits
-      only): the low-level ``markdown_domain_title`` or
-      ``markdown_domain`` fields when fine-grained choice is needed.
-    - **Aggregator / warn-flagged hits:** both ``markdown_recommended``
-      and ``markdown_bibliography`` already carry the ⚠️ prefix; no
-      manual re-application needed.
-
-    Note (v0.6.3): when a DOI is registered, ``markdown_domain`` and
-    ``display_label_domain`` are ``None``. The bare-domain variant
-    ``[(doi.org)]`` is uninformative noise when a DOI exists — it tells
-    the reader nothing about *which* DOI. The Author-Year and
-    DOI-string variants are exposed instead, both useful in any
-    rendering context. Three converging daily-driver runs (v0.6.0,
-    v0.6.1, v0.6.2) showed the agent reflexively picking
-    ``markdown_domain`` for both body text and bibliography despite
-    docstring guidance and context-named pflichtfelds; removing the
-    noise variant for DOI hits is the structural fix. For non-DOI
-    sources (Zenon, IAA pre-DataCite, etc.) the domain form remains
-    exposed because ``[(zenon.dainst.org)]`` is a legitimate
-    identifier hint there.
+    Fields are strings because real-world values are messy: volumes like
+    ``"12A"`` or ``"XXIV"``, page ranges with en-dashes, issue numbers
+    that include letter suffixes. Adapters pass what they have; missing
+    fields stay ``None`` and the bibliography-line renderer omits them
+    defensively.
     """
 
-    primary_url: Optional[HttpUrl] = None
-    display_domain: Optional[str] = None
+    name: Optional[str] = None
+    volume: Optional[str] = None
+    issue: Optional[str] = None
+    pages: Optional[str] = None
 
-    display_label_authoryear: Optional[str] = None
-    display_label_domain: Optional[str] = None
-    display_label_domain_title: Optional[str] = None
-    display_label_doi: Optional[str] = None
 
-    markdown_authoryear: Optional[str] = None
-    markdown_domain: Optional[str] = None
-    markdown_domain_title: Optional[str] = None
-    markdown_doi: Optional[str] = None
+class InlineCitation(BaseModel):
+    """Tool-authoritative citation strings the agent copies verbatim.
 
-    markdown_recommended: str
-    markdown_bibliography: str
+    Schema v2 (v0.7.0) collapses six prior ``markdown_*`` variants into
+    one ``markdown`` field plus two tool-authoritative bibliographic
+    fields. Rationale:
+
+    1. **Format convergence across models.** Literal models (Qwen
+       3.5 122B) copied multi-variant schemas verbatim and reflexively
+       picked low-information variants (``[(doi.org)](url)``).
+       Synthesising models (Ring 2.6 1T) ignored the schema entirely
+       and rendered their own Author-Year form. A single ``markdown``
+       field makes both pathways converge on the same author-year
+       Inline-Citation form.
+    2. **Hallucination protection.** Empirically observed
+       DOI-consistent author-year hallucinations (same DOI rendered as
+       two different authors in the same bibliography) are eliminated
+       by exposing ``authoritative_authors_label`` and
+       ``authoritative_bibliography_line`` — tool-rendered strings that
+       the agent is instructed to copy literally instead of
+       reconstructing from training knowledge.
+
+    Field roles:
+
+    - ``url`` — the canonical URL (DOI > OpenAlex > Zenon > IAA >
+      ADAJ > arXiv > Semantic Scholar > CORE > Europe PMC > OA >
+      Landing).
+    - ``markdown`` — finished Inline-Markdown link. Author-Year form
+      for academic hits, Domain-Title form for web references,
+      Domain-only as last resort. Aggregator and warn-flagged hits get
+      the ⚠️-prefix automatically.
+    - ``authoritative_authors_label`` — plain-text Author-Year string
+      ("Finkelstein 1999"). For agents that prefer to render their own
+      Inline-Citation form instead of copying ``markdown``.
+    - ``authoritative_bibliography_line`` — the full bibliography-entry
+      string ("Finkelstein, I. (1999). Title. *BASOR* 314, 55–70.").
+      Copied verbatim into the "Zitierte Quellen" section. ``None``
+      when venue metadata is incomplete — in that case the agent must
+      fall back to URL/DOI form without reconstructing author or
+      journal from training data.
+    - ``fallback_text`` — Author-Year-page form for print-only hits
+      with no URL anchor.
+    """
+
+    url: Optional[HttpUrl] = None
+    markdown: str
+    authoritative_authors_label: Optional[str] = None
+    authoritative_bibliography_line: Optional[str] = None
     fallback_text: str
 
 
@@ -168,27 +179,24 @@ class DAOPaper(BaseModel):
     DOI, a Zenon record-ID, an IAA report number, or an ADAJ
     volume/article reference.
 
-    Citation rendering — when citing a hit in body text, copy
-    ``inline_citation.markdown_recommended`` verbatim. It is the
-    pre-rendered Markdown link (Author-Year form for academic hits,
-    Domain-Title form for web hits, ⚠️-prefixed for aggregators or
-    flagged hits). Do not reconstruct citations from ``doi_or_id`` /
+    Citation rendering (Schema v2, v0.7.0) — for in-text citations, copy
+    ``inline_citation.markdown`` verbatim. It is the pre-rendered
+    Markdown link in Author-Year form for academic hits, Domain-Title
+    form for web hits, and ⚠️-prefixed for aggregator or warn-flagged
+    hits. Do not reconstruct citations from ``doi_or_id`` /
     ``landing_page_url`` / ``authors`` — the builder has already chosen
-    the format that fits the source. Only fall back to
-    ``inline_citation.fallback_text`` when ``primary_url`` is ``null``.
+    the format that fits the source. Only ``inline_citation.url`` is
+    ``None`` (print-only), the agent prints ``fallback_text``.
 
-    For bibliography / reference-list entries (the numbered "Zitierte
-    Quellen" section at the end of a research-stand document), copy
-    ``inline_citation.markdown_bibliography`` verbatim — it is always
-    set and renders the DOI string itself in the visible label when a
-    DOI is registered (e.g.
-    ``[(10.1179/tav.1984.1984.2.189)](https://doi.org/10.1179/…)``)
-    instead of just ``[(doi.org)](…)``. This is exactly what scholarly
-    readers expect for cross-reference and BibTeX round-tripping. It
-    falls back gracefully through Author-Year → Domain-Title → Domain →
-    plain text when no DOI exists. Think of it as the bibliography
-    counterpart to ``markdown_recommended``: body text gets one, the
-    reference list gets the other.
+    For the bibliography section, copy
+    ``inline_citation.authoritative_bibliography_line`` verbatim — it
+    is the canonical full reference line ("Finkelstein, I. (1999).
+    Title. *BASOR* 314, 55–70."). If the field is ``None``, venue
+    metadata is incomplete; in that case fall back to Author-Year
+    plus URL/DOI without reconstructing author or journal from
+    training data. ``authoritative_authors_label`` is the plain-text
+    Author-Year string for prose ("Finkelstein 1999") — copy that
+    instead of reconstructing one yourself.
     """
 
     title: str

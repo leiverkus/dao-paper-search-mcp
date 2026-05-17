@@ -141,8 +141,8 @@ def test_entry_to_paper_with_doi() -> None:
     assert p.year == 2024
     # Inline citation: DOI wins.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended == (
-        "[(Doe et al. 2024)](https://doi.org/10.1234/journal.2024.01)"
+    assert p.inline_citation.markdown == (
+        "[(Doe, Smith & Müller 2024)](https://doi.org/10.1234/journal.2024.01)"
     )
     # PDF link surfaced as open_access_url.
     assert str(p.open_access_url) == "http://arxiv.org/pdf/2401.01234v2"
@@ -159,7 +159,7 @@ def test_entry_to_paper_preprint_only_falls_back_to_arxiv_landing() -> None:
     assert str(p.landing_page_url) == "https://arxiv.org/abs/2403.99999"
     # Inline citation: arxiv.org as primary_url, Author-Year form.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended == (
+    assert p.inline_citation.markdown == (
         "[(Anonymous 2024)](https://arxiv.org/abs/2403.99999)"
     )
 
@@ -193,7 +193,7 @@ async def test_search_arxiv_impl_happy_path() -> None:
     assert len(results) == 2
     assert all(isinstance(p, DAOPaper) for p in results)
     assert results[0].inline_citation is not None
-    assert results[0].inline_citation.markdown_recommended.startswith("[(Doe et al. 2024)]")
+    assert results[0].inline_citation.markdown.startswith("[(Doe, Smith & Müller 2024)]")
 
 
 @pytest.mark.asyncio

@@ -165,7 +165,7 @@ def test_record_to_paper_article_type() -> None:
     assert p.abstract == "Plain text abstract"
     # Inline citation: DOI present → Author-Year form.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended == (
+    assert p.inline_citation.markdown == (
         "[(Mazar 2018)](https://doi.org/10.5281/zenodo.7654321)"
     )
 
@@ -180,7 +180,7 @@ def test_record_to_paper_software_flagged_in_verification_note() -> None:
     assert p.audit.warn_marker is False
     # Multi-author Author-Year against DOI.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended == (
+    assert p.inline_citation.markdown == (
         "[(Schmidt & Kohli 2024)](https://doi.org/10.5281/zenodo.1234567)"
     )
     # File download URL surfaces as open_access_url.
@@ -220,7 +220,7 @@ async def test_search_zenodo_impl_happy_path() -> None:
     assert isinstance(p, DAOPaper)
     assert p.source == "zenodo"
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown_recommended.startswith("[(Mazar 2018)]")
+    assert p.inline_citation.markdown.startswith("[(Mazar 2018)]")
 
 
 @pytest.mark.asyncio
