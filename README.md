@@ -62,6 +62,7 @@ Add to `~/.config/opencode/opencode.jsonc` under the `mcp` block:
   ],
   "enabled": true,
   "environment": {
+    "CORE_API_KEY": "your-core-api-key",
     "DAO_PAPER_SEARCH_CONTACT_EMAIL": "your-email@example.com",
     "DAO_PAPER_SEARCH_RATE_LIMIT_MS": "1000"
   }
@@ -70,7 +71,14 @@ Add to `~/.config/opencode/opencode.jsonc` under the `mcp` block:
 
 Then update `~/.config/opencode/agent/research.md` to route Levant/IAA/DoA-Jordan queries to this server first.
 
-`DAO_PAPER_SEARCH_CONTACT_EMAIL` is sent as a `mailto:` identifier in the User-Agent header to APIs that support a polite pool (OpenAlex, Crossref, CORE, arXiv). Omitting it is fine — the server falls back to `"anonymous"` — but providing your address improves rate-limit priority on those APIs.
+### Environment variables
+
+| Variable | Required | Default | Purpose |
+|---|---|---|---|
+| `CORE_API_KEY` | **yes** (for `search_core`) | — | Bearer token for the CORE v3 API. Register free at [core.ac.uk/services/api](https://core.ac.uk/services/api). Without it `search_core` raises an error on every call. |
+| `DAO_PAPER_SEARCH_CONTACT_EMAIL` | no | `"anonymous"` | Your e-mail, sent as `mailto:` in User-Agent headers to polite-pool APIs (OpenAlex, Crossref, CORE, arXiv). Improves rate-limit priority on those APIs. |
+| `SEMANTIC_SCHOLAR_API_KEY` | no | — | API key for Semantic Scholar. Without it the adapter runs on the public bucket (~100 req/min); with it limits rise substantially. Register at [semanticscholar.org/product/api](https://www.semanticscholar.org/product/api). |
+| `DAO_PAPER_SEARCH_RATE_LIMIT_MS` | no | `1000` | Minimum milliseconds between outbound requests (simple rate limiter). |
 
 ## Architecture principles
 

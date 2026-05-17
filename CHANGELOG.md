@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.4] - 2026-05-18
+
+Document all environment variables in README.
+
+### Added
+
+- README: env var reference table (`CORE_API_KEY`, `DAO_PAPER_SEARCH_CONTACT_EMAIL`,
+  `SEMANTIC_SCHOLAR_API_KEY`, `DAO_PAPER_SEARCH_RATE_LIMIT_MS`) with required/optional
+  status, defaults, and registration links.
+- README OpenCode snippet: `CORE_API_KEY` added (required for `search_core`).
+
+---
+
 ## [0.7.3] - 2026-05-18
 
 Privacy fix — remove personal data from public repo; configurable contact e-mail.
@@ -592,7 +605,8 @@ most relevant to DAO/Digital-Humanities research.
   upstream SSR is restored or a playwright fallback is added post-MVP.
   See README "Known limitations".
 
-[Unreleased]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.7.3...HEAD
+[Unreleased]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.7.4...HEAD
+[0.7.4]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/leiverkus/dao-paper-search-mcp/compare/v0.7.0...v0.7.1
