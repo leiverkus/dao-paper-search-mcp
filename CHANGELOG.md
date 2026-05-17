@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-05-18
+
+Schema v2.1 — DOI/URL link appended to `authoritative_bibliography_line`.
+
+**Why:** Live test (2026-05-18, Qwen 3.5 122B, Negev-Festungen-Frage) showed
+that Schema v2's `authoritative_bibliography_line` was Plain-Text with no
+clickable links. Because Qwen 3.5 122B copies the field verbatim (exactly the
+intended Single-Source-of-Truth behaviour), bibliography entries appeared as
+bare author-date strings. The fix: the tool now appends the link, so the
+literal-copy model produces linked references without reconstruction.
+
+### Fixed
+
+- `build_bibliography_line()` appends a DOI Markdown link
+  (`DOI: [10.xxx](https://doi.org/10.xxx)`) when a DOI is registered, or a
+  shortened URL link (`URL: [domain/…](url)`) when only a `primary_url` is
+  available. No link is appended when neither is present.
+
+### Added
+
+- `_shorten_url_for_label()` helper — truncates long paths to `"domain/…"` so
+  non-DOI URLs don't overflow bibliography lines.
+
+### Tests
+
+274 passed (was 271). 3 new tests: `test_shorten_url_for_label`,
+`test_bibliography_line_no_doi_no_url_no_append`,
+`test_bibliography_line_url_fallback_when_no_doi`.
+
+---
+
 ## [0.7.0] - 2026-05-18
 
 Schema v2 — radical inline-citation simplification plus structural

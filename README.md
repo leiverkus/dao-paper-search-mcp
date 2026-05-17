@@ -87,14 +87,14 @@ Each `DAOPaper` carries three blocks the agent should consume directly:
 - `audit`: `primary_source`, `aggregator`, `verification_note`, `warn_marker` — flags that drive the citation renderer.
 - `inline_citation`: pre-rendered Markdown plus the tool-authoritative bibliography strings.
 
-### `inline_citation` fields (Schema v2, since v0.7.0)
+### `inline_citation` fields (Schema v2.1, since v0.7.1)
 
 | Field | Purpose |
 |---|---|
 | `url` | Canonical URL (priority: DOI > OpenAlex > Zenon > IAA > ADAJ > arXiv > Semantic Scholar > CORE > Europe PMC > open_access_url > landing_page_url). |
 | `markdown` | Finished in-text Markdown link. Author-Year form for academic hits (`[(Cohen 1979)](https://doi.org/…)`), Domain-Title form for web hits (`[(example.org — Title…)](url)`), Domain-only as last resort, and `⚠️`-prefixed for aggregator/warn-flagged hits. Print-only hits (no URL) collapse to `fallback_text`. **Copy this verbatim** in prose. |
 | `authoritative_authors_label` | Plain-text Author-Year string (`"Finkelstein 1999"`) — `None` when no author context exists. Use this when you want to render Author-Year yourself instead of copying `markdown`; do **not** reconstruct from `authors`/`year`. |
-| `authoritative_bibliography_line` | Full reference-list line (`"Finkelstein, I. (1999). Title. *BASOR* 314, 55–70."`). `None` when venue metadata is incomplete — in that case fall back to Author-Year + URL/DOI rather than reconstructing the line from training knowledge. **Copy verbatim** in the references list. |
+| `authoritative_bibliography_line` | Full reference-list line with a trailing clickable link: `"Finkelstein, I. (1999). Title. *BASOR* 314, 55–70. DOI: [10.2307/1357451](https://doi.org/10.2307/1357451)"`. DOI takes priority over `primary_url`; no suffix when neither is present. `None` when author/year/title metadata is incomplete. **Copy verbatim** in the references list. |
 | `fallback_text` | `"Cohen 1979: 61–79"` — used when no `url` exists (print-only). |
 
 **Author-label rules (inline):**
