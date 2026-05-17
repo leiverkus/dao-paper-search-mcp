@@ -62,13 +62,15 @@ Add to `~/.config/opencode/opencode.jsonc` under the `mcp` block:
   ],
   "enabled": true,
   "environment": {
-    "WIKIDATA_USER_AGENT": "dao-paper-search-mcp/0.1 (your-email@example.com)",
+    "DAO_PAPER_SEARCH_CONTACT_EMAIL": "your-email@example.com",
     "DAO_PAPER_SEARCH_RATE_LIMIT_MS": "1000"
   }
 }
 ```
 
 Then update `~/.config/opencode/agent/research.md` to route Levant/IAA/DoA-Jordan queries to this server first.
+
+`DAO_PAPER_SEARCH_CONTACT_EMAIL` is sent as a `mailto:` identifier in the User-Agent header to APIs that support a polite pool (OpenAlex, Crossref, CORE, arXiv). Omitting it is fine — the server falls back to `"anonymous"` — but providing your address improves rate-limit priority on those APIs.
 
 ## Architecture principles
 
