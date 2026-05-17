@@ -12,6 +12,7 @@ from __future__ import annotations
 from dao_paper_search_mcp.inline_citation import (
     _family_name,
     _format_authors_full_bibliography,
+    _shorten_url_for_label,
     build_bibliography_line,
     build_inline_citation,
 )
@@ -432,6 +433,7 @@ def test_bibliography_line_appears_on_full_citation() -> None:
         "Finkelstein, I. (1999). "
         "Hazor and the North in the Iron Age: A Low Chronology Perspective. "
         "*BASOR* 314, 55–70."
+        " DOI: [10.2307/1357451](https://doi.org/10.2307/1357451)"
     )
 
 
@@ -471,6 +473,44 @@ def test_doi_hallucination_protection_test5() -> None:
     ):
         assert "Aharoni" not in field
         assert "1976" not in field
+
+
+# ---------------------------------------------------------------------------
+# Schema v2.1 — DOI/URL link in authoritative_bibliography_line
+# ---------------------------------------------------------------------------
+
+
+def test_shorten_url_for_label() -> None:
+    assert _shorten_url_for_label("https://www.israelantiquities.org.il/foo/bar") == "israelantiquities.org.il/…"
+    assert _shorten_url_for_label("https://foo.org") == "foo.org"
+    assert _shorten_url_for_label("https://foo.org/") == "foo.org"
+    assert _shorten_url_for_label("https://www.jstor.org/stable/1357451") == "jstor.org/…"
+
+
+def test_bibliography_line_no_doi_no_url_no_append() -> None:
+    """When neither doi nor primary_url is supplied, no link is appended."""
+    line = build_bibliography_line(
+        authors=["Cohen, R."],
+        year=1979,
+        title="The Iron Age Fortresses in the Central Negev",
+        venue=Venue(name="BASOR", volume="236", pages="61–79"),
+    )
+    assert line == "Cohen, R. (1979). The Iron Age Fortresses in the Central Negev. *BASOR* 236, 61–79."
+    assert "DOI" not in (line or "")
+    assert "URL" not in (line or "")
+
+
+def test_bibliography_line_url_fallback_when_no_doi() -> None:
+    """When doi is absent but primary_url is set, a URL link is appended."""
+    line = build_bibliography_line(
+        authors=["Lender, Y."],
+        year=2007,
+        title="Some chapter",
+        venue=None,
+        primary_url="https://www.israelantiquities.org.il/publications/chapter/42",
+    )
+    assert line is not None
+    assert line.endswith(" URL: [israelantiquities.org.il/…](https://www.israelantiquities.org.il/publications/chapter/42)")
 
 
 # ---------------------------------------------------------------------------

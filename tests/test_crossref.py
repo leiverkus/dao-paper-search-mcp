@@ -184,6 +184,7 @@ def test_item_to_paper_three_authors_explicit_inline_form() -> None:
         "Boaretto, E., Finkelstein, I., & Shahack-Gross, R. (2010). "
         "Radiocarbon Results from the Iron IIA Site of Atar Haroa in "
         "the Negev Highlands. *Radiocarbon* 52(1), 1-12."
+        " DOI: [10.1017/S0033822200044982](https://doi.org/10.1017/S0033822200044982)"
     )
     # JATS-stripped abstract.
     assert p.abstract is not None

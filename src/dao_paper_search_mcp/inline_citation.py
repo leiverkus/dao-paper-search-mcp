@@ -229,15 +229,23 @@ def build_bibliography_line(
     year: Optional[int],
     title: Optional[str],
     venue: Optional[Venue],
+    *,
+    doi: Optional[str] = None,
+    primary_url: Optional[str] = None,
 ) -> Optional[str]:
     """Render the full bibliography-entry line.
 
-    Format: ``"{Authors} ({Year}). {Title}. *{Venue}* {Vol}({Issue}), {Pages}."``
+    Format: ``"{Authors} ({Year}). {Title}. *{Venue}* {Vol}({Issue}), {Pages}. DOI: [doi](url)"``
 
     Returns ``None`` when authors or year are missing (the bibliography
     needs both to be a stable reference) or when title is missing.
     Vol/Issue/Pages are folded in defensively — each is omitted with
     its surrounding punctuation when ``None``.
+
+    Schema v2.1: a clickable DOI or URL link is appended at the end so
+    that literal-copy models produce linked bibliography entries without
+    any reconstruction. DOI takes priority; ``primary_url`` is used only
+    when no DOI is present.
     """
     if not authors or year is None or not title:
         return None
@@ -245,17 +253,22 @@ def build_bibliography_line(
     authors_str = _format_authors_full_bibliography(authors)
     line = f"{authors_str} ({year}). {title.strip().rstrip('.')}."
 
-    if venue is None or not venue.name:
-        return line
+    if venue is not None and venue.name:
+        line += f" *{venue.name}*"
+        if venue.volume:
+            line += f" {venue.volume}"
+            if venue.issue:
+                line += f"({venue.issue})"
+        if venue.pages:
+            line += f", {venue.pages}"
+        line += "."
 
-    line += f" *{venue.name}*"
-    if venue.volume:
-        line += f" {venue.volume}"
-        if venue.issue:
-            line += f"({venue.issue})"
-    if venue.pages:
-        line += f", {venue.pages}"
-    line += "."
+    if doi:
+        line += f" DOI: [{doi}](https://doi.org/{doi})"
+    elif primary_url:
+        label = _shorten_url_for_label(primary_url)
+        line += f" URL: [{label}]({primary_url})"
+
     return line
 
 
@@ -301,6 +314,20 @@ def _display_domain(url: str) -> str:
     netloc = urlparse(url).netloc.lower()
     if netloc.startswith("www."):
         netloc = netloc[4:]
+    return netloc
+
+
+def _shorten_url_for_label(url: str) -> str:
+    """Return a compact label for a URL used in bibliography link text.
+
+    ``https://www.foo.org/very/long/path`` → ``"foo.org/…"``
+    ``https://foo.org`` → ``"foo.org"``
+    """
+    parsed = urlparse(url)
+    netloc = parsed.netloc.lower().removeprefix("www.")
+    path = parsed.path.rstrip("/")
+    if path and path != "/":
+        return f"{netloc}/…"
     return netloc
 
 
@@ -419,7 +446,11 @@ def build_inline_citation(
     fallback_text = _format_fallback(authors, year, pages)
     primary_url = _pick_primary_url(identifiers, landing_page_url, open_access_url)
     authoritative_authors_label = _format_author_label(authors, year)
-    authoritative_bibliography_line = build_bibliography_line(authors, year, title, venue)
+    authoritative_bibliography_line = build_bibliography_line(
+        authors, year, title, venue,
+        doi=identifiers.doi,
+        primary_url=primary_url,
+    )
     markdown = render_markdown(
         authors=authors,
         year=year,
