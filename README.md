@@ -35,7 +35,7 @@ The DAO-specific sources (Zenon DAI, IAA Publications, ADAJ) are the original ra
 | `search_propylaeum` | PropylaeumDOK — FID Altertumswissenschaften OA repository (UB Heidelberg); classical archaeology, ancient history, Near East, Levant; multilingual DE/EN/IT/FR | implemented |
 | `search_ixtheo` | IxTheo — Index Theologicus (UB Tübingen); theology, biblical studies, church history | implemented |
 | `search_openedition` | OpenEdition — ~600 French SSH journals + books incl. *Syria*, *Semitica*, *Yod*, *Topoi* (OAI-PMH, CC0); multilingual FR/EN | implemented |
-| `search_gnomon` | Gnomon Bibliographische Datenbank (via K10plus SRU) — classical studies bibliography | planned |
+| `search_gnomon` | Gnomon Bibliographische Datenbank (via K10plus SRU) — classical studies bibliography | implemented |
 | `search_perse` | Persée — French humanities journals (SPARQL backend) | planned |
 | `search_tocs_in` | TOCS-IN — Toronto Classics journal tables of contents | planned |
 

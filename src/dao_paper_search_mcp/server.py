@@ -16,6 +16,7 @@ from .adapters import arxiv as _arxiv
 from .adapters import biorxiv as _biorxiv
 from .adapters import core as _core
 from .adapters import crossref as _crossref
+from .adapters import gnomon as _gnomon
 from .adapters import iaa as _iaa
 from .adapters import ixtheo as _ixtheo
 from .adapters import openalex as _openalex
@@ -54,6 +55,7 @@ _adaj.register(mcp)
 _propylaeum.register(mcp)
 _openedition.register(mcp)
 _ixtheo.register(mcp)
+_gnomon.register(mcp)
 _crossref.register(mcp)
 _openalex.register(mcp)
 _semantic_scholar.register(mcp)

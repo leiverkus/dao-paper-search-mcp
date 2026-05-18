@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-05-18
+
+Gnomon Bibliographische Datenbank adapter via K10plus SRU.
+
+### Added
+
+- **`search_gnomon`** — Gnomon Bibliographische Datenbank adapter
+  (K10plus SRU, `sru.k10plus.de/opac-de-627`, `picaxml` schema). Leading
+  international bibliography for classical studies: ancient Greece and Rome,
+  classical archaeology, ancient history, classical philology, and the
+  Hellenistic/Roman Near East. Uses `pica.all=` CQL query (all indexed
+  fields) and `pica.jah` year filter. PICA+ field mapping handles both
+  GND-linked records (uppercase `A`/`D` author subfields) and simple
+  string entries (lowercase `a`/`d`). Subtitle from `021A/d` combined
+  with main title; series from `036E/a` and publisher from `033A/n` used
+  as venue fallback for book records.
+- 56 tests in `tests/test_gnomon.py`.
+
+---
+
 ## [0.8.0] - 2026-05-18
 
 Three new Tier-2 search adapters: PropylaeumDOK, OpenEdition, IxTheo.
