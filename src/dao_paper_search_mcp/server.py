@@ -17,7 +17,10 @@ from .adapters import biorxiv as _biorxiv
 from .adapters import core as _core
 from .adapters import crossref as _crossref
 from .adapters import iaa as _iaa
+from .adapters import ixtheo as _ixtheo
 from .adapters import openalex as _openalex
+from .adapters import openedition as _openedition
+from .adapters import propylaeum as _propylaeum
 from .adapters import semantic_scholar as _semantic_scholar
 from .adapters import zenodo as _zenodo
 from .adapters import zenon as _zenon
@@ -48,6 +51,9 @@ async def ping() -> str:
 _zenon.register(mcp)
 _iaa.register(mcp)
 _adaj.register(mcp)
+_propylaeum.register(mcp)
+_openedition.register(mcp)
+_ixtheo.register(mcp)
 _crossref.register(mcp)
 _openalex.register(mcp)
 _semantic_scholar.register(mcp)

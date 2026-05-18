@@ -28,9 +28,16 @@ The DAO-specific sources (Zenon DAI, IAA Publications, ADAJ) are the original ra
 | `search_zenodo` | Zenodo (data, software, preprints, every record gets a DOI) | implemented (Sprint 3) |
 | `search_biorxiv` | bioRxiv + medRxiv preprints (via Europe PMC) — aDNA / paleogenomic currency | implemented (Sprint 4) |
 
-### Tier 2 (planned, DAO-specific)
+### Tier 2 (DAO-specific)
 
-Propylaeum, IxTheo, Persée, OpenEdition, Gnomon Online, TOCS-IN — one adapter per follow-up PR.
+| Tool | Source | Status |
+|---|---|---|
+| `search_propylaeum` | PropylaeumDOK — FID Altertumswissenschaften OA repository (UB Heidelberg); classical archaeology, ancient history, Near East, Levant; multilingual DE/EN/IT/FR | implemented |
+| `search_ixtheo` | IxTheo — Index Theologicus (UB Tübingen); theology, biblical studies, church history | implemented |
+| `search_openedition` | OpenEdition — ~600 French SSH journals + books incl. *Syria*, *Semitica*, *Yod*, *Topoi* (OAI-PMH, CC0); multilingual FR/EN | implemented |
+| `search_gnomon` | Gnomon Bibliographische Datenbank (via K10plus SRU) — classical studies bibliography | planned |
+| `search_perse` | Persée — French humanities journals (SPARQL backend) | planned |
+| `search_tocs_in` | TOCS-IN — Toronto Classics journal tables of contents | planned |
 
 ## Install / Run
 

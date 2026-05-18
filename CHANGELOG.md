@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-05-18
+
+Three new Tier-2 search adapters: PropylaeumDOK, OpenEdition, IxTheo.
+
+### Added
+
+- **`search_propylaeum`** — PropylaeumDOK OAI-PMH adapter (EPrints 3.4,
+  `archiv.ub.uni-heidelberg.de/propylaeumdok`). FID Altertumswissenschaften
+  repository for classical archaeology, ancient history, and Near Eastern
+  studies; multilingual DE/EN/IT/FR. Extracts DOI, EPrints ID, venue from
+  `dc:source`, PDF from `dc:relation`, ISO 639-2→1 language mapping with
+  heuristic fallback.
+- **`search_openedition`** — OpenEdition OAI-PMH adapter
+  (`metadata.openedition.org/oai`, CC0). ~600 French SSH peer-reviewed
+  journals including *Syria*, *Semitica*, *Yod*, *Topoi*, *Revue des études
+  anciennes*. Set filter (`journals` / `books` / `all`); multi-value
+  `dc:date` handling (`info:eu-repo/date/…` fallback); multilingual
+  `dc:description`/`dc:subject`.
+- **`search_ixtheo`** — IxTheo / BSZ SRU adapter (`sru.bsz-bw.de/swb`,
+  `picaxml` schema). Index Theologicus — leading bibliography for theology,
+  biblical studies, and church history (UB Tübingen). Uses BSZ union-catalogue
+  SRU because `ixtheo.de` runs a JS proof-of-work challenge. PICA+ field
+  mapping: title (021A, `@` sort-marker stripping), authors (028A/028C
+  family+given), DOI (004V bare / 017C URL fallback), venue (039B journal +
+  031A vol/issue/pages), abstract (047I), language (010@, ISO 639-2→1),
+  `startRecord` pagination.
+- `Identifiers.propylaeum_id` field — stable EPrints numeric ID extracted
+  from the PropylaeumDOK landing URL.
+- 29 tests for `search_propylaeum` (`tests/test_propylaeum.py`).
+- 32 tests for `search_openedition` (`tests/test_openedition.py`).
+- 53 tests for `search_ixtheo` (`tests/test_ixtheo.py`).
+
+---
+
 ## [0.7.4] - 2026-05-18
 
 Document all environment variables in README.

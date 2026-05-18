@@ -88,6 +88,7 @@ class Identifiers(BaseModel):
     arxiv_id: Optional[str] = None
     core_id: Optional[str] = None
     europepmc_id: Optional[str] = None
+    propylaeum_id: Optional[str] = None
 
 
 class Audit(BaseModel):
