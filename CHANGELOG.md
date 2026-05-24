@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-05-24
+
+First PyPI release and 1.0 API stability commitment. QA infrastructure
+parity with `leiverkus/open-document-skills`.
+
+The `DAOPaper` output schema (inline-citation block, `audit`,
+`identifiers`) and the eleven search/resolve tool names are now
+considered stable and will follow semver. Additions remain non-breaking;
+removals or renames trigger a major bump.
+
+### Added
+
+- GitHub Actions `tests.yml` workflow — four jobs (lint via ruff, smoke
+  on Py 3.11/3.12/3.13, mypy typecheck, coverage with `--cov-fail-under=40`)
+  on every push and pull request. CI runs `pytest -m "not live"` so the
+  live verification suite never hits real upstreams in CI.
+- GitHub Actions `publish.yml` workflow — publishes to PyPI on every
+  GitHub Release via Trusted Publishing (OIDC, no token in the repo).
+- `dev` extras in `pyproject.toml` adding ruff, mypy, pytest-cov, build,
+  pre-commit on top of the existing `test` deps.
+- Tool configs in `pyproject.toml`: `[tool.ruff]`, `[tool.mypy]`,
+  `[tool.coverage.*]`.
+- `.pre-commit-config.yaml` running `ruff-check --fix` + `ruff-format`.
+- `CONTRIBUTING.md` documenting the local QA loop and release flow.
+- README badges (Tests, PyPI, Python, License) under the H1.
+
+### Changed
+
+- ruff sweep across the repo: 1783 auto-fixes plus formatting of
+  147 files. `PublicationStatus(str, Enum)` → `StrEnum` (UP042; safe
+  under Python 3.11+, equality and serialisation behaviour unchanged).
+- mypy clean: introduced `HttpxParams` `TypeAlias` in `utils/__init__.py`
+  used by every adapter's `_build_params` helper to satisfy httpx's
+  wider param value type. Narrowed `site_id_tokens_from_zenon_record`
+  to `Mapping[str, Any]`. Narrowed BeautifulSoup `.get("href")` results
+  in the ADAJ adapter via `isinstance` checks before passing to
+  `_absolute_url`.
+
 ## [0.9.0] - 2026-05-18
 
 Gnomon Bibliographische Datenbank adapter via K10plus SRU.

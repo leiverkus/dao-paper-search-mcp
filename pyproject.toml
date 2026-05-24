@@ -1,6 +1,6 @@
 [project]
 name = "dao-paper-search-mcp"
-version = "0.9.0"
+version = "1.0.0"
 description = "MCP server for DAO-centred research: Zenon DAI, IAA Publications, ADAJ, plus a curated cross-platform paper-search surface (Crossref, OpenAlex, Semantic Scholar, arXiv, CORE, Zenodo, bioRxiv) — every hit pre-renders an inline_citation block for verbatim agent copy."
 readme = "README.md"
 license = { text = "MIT" }
@@ -10,11 +10,12 @@ authors = [
 requires-python = ">=3.11"
 keywords = ["mcp", "archaeology", "levant", "bibliography", "zenon-dai", "iaa", "adaj"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
