@@ -26,7 +26,6 @@ from dao_paper_search_mcp.adapters.propylaeum import (
 )
 from dao_paper_search_mcp.models import DAOPaper
 
-
 # ---------------------------------------------------------------------------
 # OAI-PMH fixtures — shape-faithful EPrints 3.4 Dublin Core records
 # ---------------------------------------------------------------------------
@@ -146,13 +145,10 @@ PAGE_TWO = """<?xml version="1.0" encoding="UTF-8"?>
 # Unit tests — pure functions
 # ---------------------------------------------------------------------------
 
+
 def test_extract_eprints_id_from_url() -> None:
-    assert _extract_eprints_id(
-        "https://archiv.ub.uni-heidelberg.de/propylaeumdok/7301/"
-    ) == "7301"
-    assert _extract_eprints_id(
-        "https://archiv.ub.uni-heidelberg.de/propylaeumdok/7301/1/file.pdf"
-    ) == "7301"
+    assert _extract_eprints_id("https://archiv.ub.uni-heidelberg.de/propylaeumdok/7301/") == "7301"
+    assert _extract_eprints_id("https://archiv.ub.uni-heidelberg.de/propylaeumdok/7301/1/file.pdf") == "7301"
     assert _extract_eprints_id("https://doi.org/10.xxx") is None
     assert _extract_eprints_id(None) is None
 
@@ -170,18 +166,18 @@ def test_classify_identifiers_doi_url_form() -> None:
 
 
 def test_classify_identifiers_info_doi_form() -> None:
-    doi, landing, _ = _classify_identifiers([
-        "https://archiv.ub.uni-heidelberg.de/propylaeumdok/42/",
-        "info:doi/10.11588/propylaeumdok.42",
-    ])
+    doi, landing, _ = _classify_identifiers(
+        [
+            "https://archiv.ub.uni-heidelberg.de/propylaeumdok/42/",
+            "info:doi/10.11588/propylaeumdok.42",
+        ]
+    )
     assert doi == "10.11588/propylaeumdok.42"
     assert landing is not None
 
 
 def test_classify_identifiers_no_doi() -> None:
-    doi, landing, pdf = _classify_identifiers([
-        "https://archiv.ub.uni-heidelberg.de/propylaeumdok/4512/"
-    ])
+    doi, landing, pdf = _classify_identifiers(["https://archiv.ub.uni-heidelberg.de/propylaeumdok/4512/"])
     assert doi is None
     assert landing == "https://archiv.ub.uni-heidelberg.de/propylaeumdok/4512/"
     assert pdf is None
@@ -258,6 +254,7 @@ def test_build_venue_from_source_empty() -> None:
 # ---------------------------------------------------------------------------
 # Parser tests
 # ---------------------------------------------------------------------------
+
 
 def test_parse_page_english_record_with_doi() -> None:
     tokens = _query_tokens("iron age negev")
@@ -364,12 +361,11 @@ def test_parse_page_record_without_url_dropped() -> None:
 # Integration tests (mocked HTTP)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_propylaeum_impl_happy_path() -> None:
-    respx.get(PROPYLAEUM_OAI).mock(
-        return_value=httpx.Response(200, text=SAMPLE_LISTRECORDS)
-    )
+    respx.get(PROPYLAEUM_OAI).mock(return_value=httpx.Response(200, text=SAMPLE_LISTRECORDS))
     results = await search_propylaeum_impl("iron age negev", max_results=5)
     assert len(results) == 1
     p = results[0]
@@ -382,9 +378,7 @@ async def test_search_propylaeum_impl_happy_path() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_propylaeum_impl_empty() -> None:
-    respx.get(PROPYLAEUM_OAI).mock(
-        return_value=httpx.Response(200, text=EMPTY_LISTRECORDS)
-    )
+    respx.get(PROPYLAEUM_OAI).mock(return_value=httpx.Response(200, text=EMPTY_LISTRECORDS))
     assert await search_propylaeum_impl("xyzzy") == []
 
 
@@ -432,9 +426,7 @@ async def test_search_propylaeum_impl_stops_at_max_results() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_propylaeum_impl_year_params_forwarded() -> None:
-    route = respx.get(PROPYLAEUM_OAI).mock(
-        return_value=httpx.Response(200, text=EMPTY_LISTRECORDS)
-    )
+    route = respx.get(PROPYLAEUM_OAI).mock(return_value=httpx.Response(200, text=EMPTY_LISTRECORDS))
     await search_propylaeum_impl("anything", max_results=5, year_from=2010, year_to=2020)
     assert route.called
     sent_url = str(route.calls.last.request.url)
@@ -446,9 +438,7 @@ async def test_search_propylaeum_impl_year_params_forwarded() -> None:
 @respx.mock
 async def test_search_propylaeum_impl_no_set_filter() -> None:
     """PropylaeumDOK is queried without a set filter (no set= param)."""
-    route = respx.get(PROPYLAEUM_OAI).mock(
-        return_value=httpx.Response(200, text=EMPTY_LISTRECORDS)
-    )
+    route = respx.get(PROPYLAEUM_OAI).mock(return_value=httpx.Response(200, text=EMPTY_LISTRECORDS))
     await search_propylaeum_impl("bronze age")
     assert route.called
     sent_url = str(route.calls.last.request.url)

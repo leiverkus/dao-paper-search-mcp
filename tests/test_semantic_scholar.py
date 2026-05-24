@@ -19,7 +19,6 @@ from dao_paper_search_mcp.adapters.semantic_scholar import (
 )
 from dao_paper_search_mcp.models import DAOPaper, PublicationStatus
 
-
 # Realistic S2 paper for Cohen 1979 BASOR (DOI present).
 COHEN_1979_PAPER = {
     "paperId": "abc123def456",
@@ -67,9 +66,7 @@ def test_format_authors_keeps_single_token() -> None:
 
 
 def test_format_journal_prefers_structured_over_venue() -> None:
-    assert _format_journal_or_volume(COHEN_1979_PAPER) == (
-        "Bulletin of the American Schools of Oriental Research 236"
-    )
+    assert _format_journal_or_volume(COHEN_1979_PAPER) == ("Bulletin of the American Schools of Oriental Research 236")
     # No journal block → fall through to venue.
     assert _format_journal_or_volume({"venue": "ICCS Proceedings"}) == "ICCS Proceedings"
     # Nothing usable.
@@ -130,9 +127,7 @@ def test_paper_to_paper_doi_form() -> None:
     assert p.audit is not None and p.audit.verification_note == "citation_count=87"
     # Inline citation: DOI present → Author-Year against doi.org.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown == (
-        "[(Cohen 1979)](https://doi.org/10.2307/1356668)"
-    )
+    assert p.inline_citation.markdown == ("[(Cohen 1979)](https://doi.org/10.2307/1356668)")
 
 
 def test_paper_to_paper_arxiv_only_falls_back_to_arxiv_landing() -> None:
@@ -149,9 +144,7 @@ def test_paper_to_paper_arxiv_only_falls_back_to_arxiv_landing() -> None:
     assert str(p.open_access_url) == "https://arxiv.org/pdf/2401.01234"
     # Inline citation: no DOI → Author-Year against arxiv.org.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown == (
-        "[(Doe & Smith 2024)](https://arxiv.org/abs/2401.01234)"
-    )
+    assert p.inline_citation.markdown == ("[(Doe & Smith 2024)](https://arxiv.org/abs/2401.01234)")
 
 
 def test_paper_with_only_s2_id_uses_s2_landing() -> None:
@@ -168,10 +161,7 @@ def test_paper_with_only_s2_id_uses_s2_landing() -> None:
     assert p.doi_or_id == "s2:xx000"
     assert str(p.landing_page_url) == "https://www.semanticscholar.org/paper/xx000"
     assert p.inline_citation is not None
-    assert (
-        p.inline_citation.markdown
-        == "[(Author 2020)](https://www.semanticscholar.org/paper/xx000)"
-    )
+    assert p.inline_citation.markdown == "[(Author 2020)](https://www.semanticscholar.org/paper/xx000)"
 
 
 def test_paper_without_any_anchor_is_dropped() -> None:
@@ -207,9 +197,7 @@ async def test_search_s2_impl_happy_path() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_s2_impl_empty() -> None:
-    respx.get(S2_API).mock(
-        return_value=httpx.Response(200, json={"total": 0, "data": []})
-    )
+    respx.get(S2_API).mock(return_value=httpx.Response(200, json={"total": 0, "data": []}))
     assert await search_semantic_scholar_impl("xyzzy") == []
 
 
@@ -224,9 +212,7 @@ async def test_search_s2_impl_http_error_propagates() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_s2_impl_query_params_forwarded() -> None:
-    route = respx.get(S2_API).mock(
-        return_value=httpx.Response(200, json={"total": 0, "data": []})
-    )
+    route = respx.get(S2_API).mock(return_value=httpx.Response(200, json={"total": 0, "data": []}))
     await search_semantic_scholar_impl(
         "Boaretto Atar Haroa",
         max_results=3,
@@ -244,9 +230,7 @@ async def test_search_s2_impl_query_params_forwarded() -> None:
 @respx.mock
 async def test_search_s2_impl_sends_api_key_when_env_set(monkeypatch) -> None:
     monkeypatch.setenv("SEMANTIC_SCHOLAR_API_KEY", "test-key-xyz")
-    route = respx.get(S2_API).mock(
-        return_value=httpx.Response(200, json={"total": 0, "data": []})
-    )
+    route = respx.get(S2_API).mock(return_value=httpx.Response(200, json={"total": 0, "data": []}))
     await search_semantic_scholar_impl("anything")
     assert route.calls.last.request.headers.get("x-api-key") == "test-key-xyz"
 
@@ -255,8 +239,6 @@ async def test_search_s2_impl_sends_api_key_when_env_set(monkeypatch) -> None:
 @respx.mock
 async def test_search_s2_impl_omits_api_key_when_env_unset(monkeypatch) -> None:
     monkeypatch.delenv("SEMANTIC_SCHOLAR_API_KEY", raising=False)
-    route = respx.get(S2_API).mock(
-        return_value=httpx.Response(200, json={"total": 0, "data": []})
-    )
+    route = respx.get(S2_API).mock(return_value=httpx.Response(200, json={"total": 0, "data": []}))
     await search_semantic_scholar_impl("anything")
     assert "x-api-key" not in route.calls.last.request.headers

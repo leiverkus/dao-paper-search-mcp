@@ -30,13 +30,15 @@ No internal calls to other adapters. Architecture principle #2.
 from __future__ import annotations
 
 import logging
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 import httpx
 from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
+from ..utils import HttpxParams
 from ..utils.contact import CONTACT_EMAIL
 from ..utils.doi import normalize_doi
 
@@ -52,7 +54,7 @@ _POLITE_MAILTO = CONTACT_EMAIL
 _USER_AGENT = "dao-paper-search-mcp/0.1 (+https://github.com/leiverkus/dao-paper-search-mcp)"
 
 
-def _strip_openalex_id_prefix(work_id_url: Optional[str]) -> Optional[str]:
+def _strip_openalex_id_prefix(work_id_url: str | None) -> str | None:
     """``https://openalex.org/W123`` → ``W123``."""
     if not work_id_url:
         return None
@@ -87,7 +89,7 @@ def _format_authors(work: Mapping[str, Any]) -> list[str]:
     return out
 
 
-def _format_journal_or_volume(work: Mapping[str, Any]) -> Optional[str]:
+def _format_journal_or_volume(work: Mapping[str, Any]) -> str | None:
     """Render ``"Journal Name 12(3)"`` from ``primary_location.source`` + biblio."""
     primary = work.get("primary_location") or {}
     source = primary.get("source") if isinstance(primary, dict) else None
@@ -106,7 +108,7 @@ def _format_journal_or_volume(work: Mapping[str, Any]) -> Optional[str]:
     return name
 
 
-def _format_pages(work: Mapping[str, Any]) -> Optional[str]:
+def _format_pages(work: Mapping[str, Any]) -> str | None:
     biblio = work.get("biblio") or {}
     first = (biblio.get("first_page") or "").strip()
     last = (biblio.get("last_page") or "").strip()
@@ -115,10 +117,10 @@ def _format_pages(work: Mapping[str, Any]) -> Optional[str]:
     return first or None
 
 
-def _build_venue(work: Mapping[str, Any]) -> Optional[Venue]:
+def _build_venue(work: Mapping[str, Any]) -> Venue | None:
     primary = work.get("primary_location") or {}
     source = primary.get("source") if isinstance(primary, dict) else None
-    name: Optional[str] = None
+    name: str | None = None
     if isinstance(source, dict):
         name = (source.get("display_name") or "").strip() or None
     biblio = work.get("biblio") or {}
@@ -130,7 +132,7 @@ def _build_venue(work: Mapping[str, Any]) -> Optional[Venue]:
     return Venue(name=name, volume=volume, issue=issue, pages=pages)
 
 
-def _reconstruct_abstract(inv: Optional[Mapping[str, Any]]) -> Optional[str]:
+def _reconstruct_abstract(inv: Mapping[str, Any] | None) -> str | None:
     """Rebuild a readable abstract from OpenAlex's inverted index.
 
     OpenAlex stores abstracts as ``{word: [position, …]}`` to keep the
@@ -152,13 +154,13 @@ def _reconstruct_abstract(inv: Optional[Mapping[str, Any]]) -> Optional[str]:
     return " ".join(w for _, w in positions)
 
 
-def _publication_status_from_type(work_type: Optional[str]) -> PublicationStatus:
+def _publication_status_from_type(work_type: str | None) -> PublicationStatus:
     if work_type == "preprint":
         return PublicationStatus.PREPRINT
     return PublicationStatus.PUBLISHED
 
 
-def _open_access_url(work: Mapping[str, Any]) -> Optional[str]:
+def _open_access_url(work: Mapping[str, Any]) -> str | None:
     oa = work.get("open_access") or {}
     if not isinstance(oa, dict):
         return None
@@ -166,7 +168,7 @@ def _open_access_url(work: Mapping[str, Any]) -> Optional[str]:
     return url or None
 
 
-def _work_to_paper(work: Mapping[str, Any]) -> Optional[DAOPaper]:
+def _work_to_paper(work: Mapping[str, Any]) -> DAOPaper | None:
     doi = normalize_doi(work.get("doi"))
     openalex_id = _strip_openalex_id_prefix(work.get("id"))
     if not doi and not openalex_id:
@@ -230,16 +232,16 @@ def _work_to_paper(work: Mapping[str, Any]) -> Optional[DAOPaper]:
 def _build_params(
     query: str,
     max_results: int,
-    language: Optional[str],
-    year_from: Optional[int],
-    year_to: Optional[int],
-) -> list[tuple[str, str]]:
+    language: str | None,
+    year_from: int | None,
+    year_to: int | None,
+) -> HttpxParams:
     """Build an OpenAlex ``/works`` parameter list.
 
     Filters are comma-joined into a single ``filter`` value because
     OpenAlex expects all filters in one parameter slot.
     """
-    params: list[tuple[str, str]] = [
+    params: HttpxParams = [
         ("search", query),
         ("per_page", str(max(1, min(max_results, 100)))),
         ("mailto", _POLITE_MAILTO),
@@ -260,16 +262,15 @@ def _build_params(
 async def search_openalex_impl(
     query: str,
     max_results: int = 10,
-    language: Optional[str] = None,
-    year_from: Optional[int] = None,
-    year_to: Optional[int] = None,
+    language: str | None = None,
+    year_from: int | None = None,
+    year_to: int | None = None,
     *,
-    client: Optional[httpx.AsyncClient] = None,
+    client: httpx.AsyncClient | None = None,
 ) -> list[DAOPaper]:
     """Search OpenAlex. ``client`` is injectable for tests."""
     params = _build_params(query, max_results, language, year_from, year_to)
-    log.info("openalex.search query=%r filters=%s", query,
-             [p for p in params if p[0] == "filter"])
+    log.info("openalex.search query=%r filters=%s", query, [p for p in params if p[0] == "filter"])
 
     async def _run(c: httpx.AsyncClient) -> list[DAOPaper]:
         headers = {"User-Agent": _USER_AGENT, "Accept": "application/json"}
@@ -277,8 +278,7 @@ async def search_openalex_impl(
         r.raise_for_status()
         data = r.json()
         works = data.get("results") or []
-        log.info("openalex.search hits=%d total=%s", len(works),
-                 (data.get("meta") or {}).get("count"))
+        log.info("openalex.search hits=%d total=%s", len(works), (data.get("meta") or {}).get("count"))
         papers = [_work_to_paper(w) for w in works]
         return [p for p in papers if p is not None]
 
@@ -295,9 +295,9 @@ def register(mcp: FastMCP) -> None:
     async def search_openalex(
         query: str,
         max_results: int = 10,
-        language: Optional[str] = None,
-        year_from: Optional[int] = None,
-        year_to: Optional[int] = None,
+        language: str | None = None,
+        year_from: int | None = None,
+        year_to: int | None = None,
     ) -> list[DAOPaper]:
         """Search OpenAlex — the broadest open scholarly graph (~250M works).
         Strongest for cross-disciplinary discovery, citation networks,

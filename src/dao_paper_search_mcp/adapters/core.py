@@ -28,7 +28,8 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 import httpx
 from mcp.server.fastmcp import FastMCP
@@ -43,11 +44,7 @@ log = logging.getLogger(__name__)
 CORE_API = "https://api.core.ac.uk/v3/search/works"
 HTTP_TIMEOUT = 30.0
 
-_USER_AGENT = (
-    "dao-paper-search-mcp/0.1 "
-    "(+https://github.com/leiverkus/dao-paper-search-mcp; "
-    f"mailto:{CONTACT_EMAIL})"
-)
+_USER_AGENT = f"dao-paper-search-mcp/0.1 (+https://github.com/leiverkus/dao-paper-search-mcp; mailto:{CONTACT_EMAIL})"
 
 # Substrings in dataProvider.name that mark a hit as a secondary
 # aggregator rather than a primary repository. Lowercase comparison.
@@ -95,7 +92,7 @@ def _format_authors(work: Mapping[str, Any]) -> list[str]:
     return out
 
 
-def _data_provider_name(work: Mapping[str, Any]) -> Optional[str]:
+def _data_provider_name(work: Mapping[str, Any]) -> str | None:
     """Extract the human-readable name of the source repository."""
     dp = work.get("dataProvider") or {}
     if isinstance(dp, dict):
@@ -104,14 +101,14 @@ def _data_provider_name(work: Mapping[str, Any]) -> Optional[str]:
     return None
 
 
-def _is_aggregator(provider_name: Optional[str]) -> bool:
+def _is_aggregator(provider_name: str | None) -> bool:
     if not provider_name:
         return False
     lowered = provider_name.lower()
     return any(needle in lowered for needle in _AGGREGATOR_SUBSTRINGS)
 
 
-def _open_access_url(work: Mapping[str, Any]) -> Optional[str]:
+def _open_access_url(work: Mapping[str, Any]) -> str | None:
     """Pick the best OA URL: explicit downloadUrl, else first fulltext URL."""
     download = (work.get("downloadUrl") or "").strip()
     if download:
@@ -132,7 +129,7 @@ def _publication_status(work: Mapping[str, Any]) -> PublicationStatus:
     return PublicationStatus.PUBLISHED
 
 
-def _verification_note(work: Mapping[str, Any]) -> Optional[str]:
+def _verification_note(work: Mapping[str, Any]) -> str | None:
     """Surface non-article document types as a warning hint.
 
     CORE indexes theses, working papers, technical reports — useful
@@ -145,7 +142,7 @@ def _verification_note(work: Mapping[str, Any]) -> Optional[str]:
     return None
 
 
-def _work_to_paper(work: Mapping[str, Any]) -> Optional[DAOPaper]:
+def _work_to_paper(work: Mapping[str, Any]) -> DAOPaper | None:
     core_id_raw = work.get("id")
     core_id = str(core_id_raw).strip() if core_id_raw is not None else None
     doi = normalize_doi(work.get("doi"))
@@ -159,8 +156,7 @@ def _work_to_paper(work: Mapping[str, Any]) -> Optional[DAOPaper]:
     year = year_raw if isinstance(year_raw, int) else None
     abstract = (work.get("abstract") or "").strip() or None
     open_access_url = _open_access_url(work)
-    language = ((work.get("language") or {}).get("code") if isinstance(work.get("language"), dict)
-                else None) or "und"
+    language = ((work.get("language") or {}).get("code") if isinstance(work.get("language"), dict) else None) or "und"
     language = str(language).strip().lower() or "und"
 
     provider = _data_provider_name(work)
@@ -170,9 +166,7 @@ def _work_to_paper(work: Mapping[str, Any]) -> Optional[DAOPaper]:
         # Stack the provider name into the verification_note so the
         # agent can surface "via ResearchGate" alongside the ⚠️ marker.
         suffix = f"aggregator={provider}"
-        verification_note = (
-            f"{verification_note}; {suffix}" if verification_note else suffix
-        )
+        verification_note = f"{verification_note}; {suffix}" if verification_note else suffix
 
     if doi:
         doi_or_id = doi
@@ -195,7 +189,7 @@ def _work_to_paper(work: Mapping[str, Any]) -> Optional[DAOPaper]:
     # ever structurally exposed. Volume/issue/pages are not reliably
     # carried, so we set name-only Venue when a journal is present.
     journals = work.get("journals") or []
-    venue: Optional[Venue] = None
+    venue: Venue | None = None
     if isinstance(journals, list) and journals:
         j0 = journals[0]
         if isinstance(j0, dict):
@@ -235,8 +229,8 @@ def _work_to_paper(work: Mapping[str, Any]) -> Optional[DAOPaper]:
 def _build_params(
     query: str,
     max_results: int,
-    year_from: Optional[int],
-    year_to: Optional[int],
+    year_from: int | None,
+    year_to: int | None,
 ) -> dict[str, Any]:
     """Build a CORE v3 JSON request body.
 
@@ -258,10 +252,10 @@ def _build_params(
 async def search_core_impl(
     query: str,
     max_results: int = 10,
-    year_from: Optional[int] = None,
-    year_to: Optional[int] = None,
+    year_from: int | None = None,
+    year_to: int | None = None,
     *,
-    client: Optional[httpx.AsyncClient] = None,
+    client: httpx.AsyncClient | None = None,
 ) -> list[DAOPaper]:
     """Search CORE. ``client`` is injectable for tests."""
     api_key = os.getenv("CORE_API_KEY", "").strip()
@@ -303,8 +297,8 @@ def register(mcp: FastMCP) -> None:
     async def search_core(
         query: str,
         max_results: int = 10,
-        year_from: Optional[int] = None,
-        year_to: Optional[int] = None,
+        year_from: int | None = None,
+        year_to: int | None = None,
     ) -> list[DAOPaper]:
         """Search CORE — the largest open-access full-text aggregator
         (~250M papers from ~10k institutional repositories). Strongest

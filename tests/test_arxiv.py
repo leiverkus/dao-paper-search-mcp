@@ -16,7 +16,6 @@ from dao_paper_search_mcp.adapters.arxiv import (
     ARXIV_API,
     _apply_year_filter,
     _build_params,
-    _entry_to_paper,
     _extract_arxiv_id,
     _format_authors,
     _normalize_query,
@@ -24,7 +23,6 @@ from dao_paper_search_mcp.adapters.arxiv import (
     search_arxiv_impl,
 )
 from dao_paper_search_mcp.models import DAOPaper, PublicationStatus
-
 
 # Realistic atom feed with two entries: one DOI-bearing (post-journal)
 # and one preprint-only with an arxiv:doi missing.
@@ -141,9 +139,7 @@ def test_entry_to_paper_with_doi() -> None:
     assert p.year == 2024
     # Inline citation: DOI wins.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown == (
-        "[(Doe, Smith & Müller 2024)](https://doi.org/10.1234/journal.2024.01)"
-    )
+    assert p.inline_citation.markdown == ("[(Doe, Smith & Müller 2024)](https://doi.org/10.1234/journal.2024.01)")
     # PDF link surfaced as open_access_url.
     assert str(p.open_access_url) == "http://arxiv.org/pdf/2401.01234v2"
 
@@ -159,9 +155,7 @@ def test_entry_to_paper_preprint_only_falls_back_to_arxiv_landing() -> None:
     assert str(p.landing_page_url) == "https://arxiv.org/abs/2403.99999"
     # Inline citation: arxiv.org as primary_url, Author-Year form.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown == (
-        "[(Anonymous 2024)](https://arxiv.org/abs/2403.99999)"
-    )
+    assert p.inline_citation.markdown == ("[(Anonymous 2024)](https://arxiv.org/abs/2403.99999)")
 
 
 def test_parse_atom_empty_feed() -> None:
@@ -186,9 +180,7 @@ def test_parse_atom_drops_entry_without_arxiv_id() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_arxiv_impl_happy_path() -> None:
-    respx.get(ARXIV_API).mock(
-        return_value=httpx.Response(200, text=SAMPLE_FEED)
-    )
+    respx.get(ARXIV_API).mock(return_value=httpx.Response(200, text=SAMPLE_FEED))
     results = await search_arxiv_impl("RAG archaeology", max_results=5)
     assert len(results) == 2
     assert all(isinstance(p, DAOPaper) for p in results)
@@ -199,9 +191,7 @@ async def test_search_arxiv_impl_happy_path() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_arxiv_impl_empty() -> None:
-    respx.get(ARXIV_API).mock(
-        return_value=httpx.Response(200, text=EMPTY_FEED)
-    )
+    respx.get(ARXIV_API).mock(return_value=httpx.Response(200, text=EMPTY_FEED))
     assert await search_arxiv_impl("xyzzy") == []
 
 
@@ -216,9 +206,7 @@ async def test_search_arxiv_impl_http_error_propagates() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_arxiv_impl_query_and_year_forwarded() -> None:
-    route = respx.get(ARXIV_API).mock(
-        return_value=httpx.Response(200, text=EMPTY_FEED)
-    )
+    route = respx.get(ARXIV_API).mock(return_value=httpx.Response(200, text=EMPTY_FEED))
     await search_arxiv_impl(
         "RAG humanities",
         max_results=3,

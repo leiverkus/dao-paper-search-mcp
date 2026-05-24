@@ -23,7 +23,6 @@ from dao_paper_search_mcp.adapters.biorxiv import (
 )
 from dao_paper_search_mcp.models import DAOPaper, PublicationStatus
 
-
 # A realistic bioRxiv preprint record from Europe PMC. Mirrors the
 # Lazaridis-Levant-aDNA paper genre that's the canonical use case.
 LAZARIDIS_BIORXIV = {
@@ -251,9 +250,7 @@ async def test_search_biorxiv_impl_filters_out_non_target_servers() -> None:
             200,
             json={
                 "hitCount": 3,
-                "resultList": {
-                    "result": [LAZARIDIS_BIORXIV, MEDRXIV_RECORD, RESEARCHSQUARE_RECORD]
-                },
+                "resultList": {"result": [LAZARIDIS_BIORXIV, MEDRXIV_RECORD, RESEARCHSQUARE_RECORD]},
             },
         )
     )

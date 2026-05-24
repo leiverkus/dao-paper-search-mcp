@@ -34,13 +34,13 @@ from __future__ import annotations
 import logging
 import re
 import xml.etree.ElementTree as ET
-from typing import Optional
 
 import httpx
 from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
+from ..utils import HttpxParams
 from ..utils.contact import CONTACT_EMAIL
 from ..utils.doi import normalize_doi
 
@@ -49,11 +49,7 @@ log = logging.getLogger(__name__)
 ARXIV_API = "http://export.arxiv.org/api/query"
 HTTP_TIMEOUT = 30.0
 
-_USER_AGENT = (
-    "dao-paper-search-mcp/0.1 "
-    "(+https://github.com/leiverkus/dao-paper-search-mcp; "
-    f"mailto:{CONTACT_EMAIL})"
-)
+_USER_AGENT = f"dao-paper-search-mcp/0.1 (+https://github.com/leiverkus/dao-paper-search-mcp; mailto:{CONTACT_EMAIL})"
 
 # Atom and arXiv namespace URIs. We pass these to ElementTree's findall
 # so XPath expressions can resolve qualified tag names.
@@ -74,7 +70,7 @@ _VERSION_SUFFIX_RE = re.compile(r"v\d+$")
 _QUERY_PREFIXES = ("all:", "ti:", "au:", "abs:", "cat:", "co:", "id:", "jr:")
 
 
-def _extract_arxiv_id(entry_id: Optional[str]) -> Optional[str]:
+def _extract_arxiv_id(entry_id: str | None) -> str | None:
     """``http://arxiv.org/abs/2401.01234v3`` → ``2401.01234``."""
     if not entry_id:
         return None
@@ -82,13 +78,13 @@ def _extract_arxiv_id(entry_id: Optional[str]) -> Optional[str]:
     # Drop scheme/host so the rsplit lands on the bare ID.
     for prefix in ("http://arxiv.org/abs/", "https://arxiv.org/abs/"):
         if s.startswith(prefix):
-            s = s[len(prefix):]
+            s = s[len(prefix) :]
             break
     s = _VERSION_SUFFIX_RE.sub("", s).strip("/")
     return s or None
 
 
-def _pdf_link(entry: ET.Element) -> Optional[str]:
+def _pdf_link(entry: ET.Element) -> str | None:
     """Find the ``link title="pdf"`` element on an Atom entry."""
     for link in entry.findall("atom:link", _NS):
         if (link.get("title") or "").lower() == "pdf":
@@ -97,7 +93,7 @@ def _pdf_link(entry: ET.Element) -> Optional[str]:
     return None
 
 
-def _text(entry: ET.Element, tag: str) -> Optional[str]:
+def _text(entry: ET.Element, tag: str) -> str | None:
     """Return the stripped text of an atom-namespaced child tag, or None."""
     el = entry.find(f"atom:{tag}", _NS)
     if el is None or el.text is None:
@@ -106,7 +102,7 @@ def _text(entry: ET.Element, tag: str) -> Optional[str]:
     return text or None
 
 
-def _arxiv_text(entry: ET.Element, tag: str) -> Optional[str]:
+def _arxiv_text(entry: ET.Element, tag: str) -> str | None:
     """Return the stripped text of an arxiv-namespaced child tag, or None."""
     el = entry.find(f"arxiv:{tag}", _NS)
     if el is None or el.text is None:
@@ -137,7 +133,7 @@ def _format_authors(entry: ET.Element) -> list[str]:
     return out
 
 
-def _extract_year(entry: ET.Element) -> Optional[int]:
+def _extract_year(entry: ET.Element) -> int | None:
     published = _text(entry, "published")
     if published and len(published) >= 4:
         try:
@@ -147,7 +143,7 @@ def _extract_year(entry: ET.Element) -> Optional[int]:
     return None
 
 
-def _entry_to_paper(entry: ET.Element) -> Optional[DAOPaper]:
+def _entry_to_paper(entry: ET.Element) -> DAOPaper | None:
     arxiv_id = _extract_arxiv_id(_text(entry, "id"))
     if not arxiv_id:
         # Without an arXiv ID we have no canonical anchor — drop.
@@ -232,8 +228,8 @@ def _normalize_query(query: str) -> str:
 
 def _apply_year_filter(
     search_query: str,
-    year_from: Optional[int],
-    year_to: Optional[int],
+    year_from: int | None,
+    year_to: int | None,
 ) -> str:
     """ANDs ``submittedDate:[lo TO hi]`` into the search_query.
 
@@ -250,9 +246,9 @@ def _apply_year_filter(
 def _build_params(
     query: str,
     max_results: int,
-    year_from: Optional[int],
-    year_to: Optional[int],
-) -> list[tuple[str, str]]:
+    year_from: int | None,
+    year_to: int | None,
+) -> HttpxParams:
     """Build an arXiv ``/query`` parameter list."""
     sq = _apply_year_filter(_normalize_query(query), year_from, year_to)
     return [
@@ -283,10 +279,10 @@ def _parse_atom(xml_text: str) -> list[DAOPaper]:
 async def search_arxiv_impl(
     query: str,
     max_results: int = 10,
-    year_from: Optional[int] = None,
-    year_to: Optional[int] = None,
+    year_from: int | None = None,
+    year_to: int | None = None,
     *,
-    client: Optional[httpx.AsyncClient] = None,
+    client: httpx.AsyncClient | None = None,
 ) -> list[DAOPaper]:
     """Search arXiv. ``client`` is injectable for tests."""
     params = _build_params(query, max_results, year_from, year_to)
@@ -313,8 +309,8 @@ def register(mcp: FastMCP) -> None:
     async def search_arxiv(
         query: str,
         max_results: int = 10,
-        year_from: Optional[int] = None,
-        year_to: Optional[int] = None,
+        year_from: int | None = None,
+        year_to: int | None = None,
     ) -> list[DAOPaper]:
         """Search arXiv — preprint server for physics, math, CS, and
         Digital-Humanities methods (NLP, RAG, GIS, 3D reconstruction).

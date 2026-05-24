@@ -27,13 +27,15 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 import httpx
 from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
+from ..utils import HttpxParams
 from ..utils.contact import CONTACT_EMAIL
 from ..utils.doi import normalize_doi
 
@@ -42,11 +44,7 @@ log = logging.getLogger(__name__)
 EUROPEPMC_API = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
 HTTP_TIMEOUT = 30.0
 
-_USER_AGENT = (
-    "dao-paper-search-mcp/0.1 "
-    "(+https://github.com/leiverkus/dao-paper-search-mcp; "
-    f"mailto:{CONTACT_EMAIL})"
-)
+_USER_AGENT = f"dao-paper-search-mcp/0.1 (+https://github.com/leiverkus/dao-paper-search-mcp; mailto:{CONTACT_EMAIL})"
 
 # Europe PMC normalises preprint server names in ``journalTitle``. We
 # match case-insensitively to be defensive against capitalisation drift.
@@ -59,7 +57,7 @@ _HTML_TAG_RE = re.compile(r"<[^>]+>")
 _HTML_WS_RE = re.compile(r"\s+")
 
 
-def _strip_markup(text: Optional[str]) -> Optional[str]:
+def _strip_markup(text: str | None) -> str | None:
     if not text:
         return None
     stripped = _HTML_TAG_RE.sub("", text)
@@ -89,7 +87,7 @@ def _parse_author_string(author_string: str) -> list[str]:
     return out
 
 
-def _doi_from_record(record: Mapping[str, Any]) -> Optional[str]:
+def _doi_from_record(record: Mapping[str, Any]) -> str | None:
     """Pull the DOI from the top-level ``doi`` field or the fulltext id list."""
     doi = normalize_doi(record.get("doi"))
     if doi:
@@ -106,7 +104,7 @@ def _doi_from_record(record: Mapping[str, Any]) -> Optional[str]:
     return None
 
 
-def _open_access_url(record: Mapping[str, Any]) -> Optional[str]:
+def _open_access_url(record: Mapping[str, Any]) -> str | None:
     """Pick the bioRxiv/medRxiv PDF URL when Europe PMC surfaces one."""
     ft = record.get("fullTextUrlList") or {}
     if not isinstance(ft, dict):
@@ -115,7 +113,7 @@ def _open_access_url(record: Mapping[str, Any]) -> Optional[str]:
     if not isinstance(urls, list):
         return None
     # Prefer the bioRxiv/medRxiv-hosted PDF; fall back to any PDF.
-    pdf_url: Optional[str] = None
+    pdf_url: str | None = None
     for entry in urls:
         if not isinstance(entry, dict):
             continue
@@ -145,7 +143,7 @@ def _journal_matches(journal: str, include_medrxiv: bool) -> bool:
     return False
 
 
-def _record_to_paper(record: Mapping[str, Any]) -> Optional[DAOPaper]:
+def _record_to_paper(record: Mapping[str, Any]) -> DAOPaper | None:
     epmc_id_raw = record.get("id")
     epmc_id = str(epmc_id_raw).strip() if epmc_id_raw is not None else None
     doi = _doi_from_record(record)
@@ -161,7 +159,7 @@ def _record_to_paper(record: Mapping[str, Any]) -> Optional[DAOPaper]:
 
     year_raw = record.get("pubYear")
     try:
-        year: Optional[int] = int(year_raw) if year_raw is not None else None
+        year: int | None = int(year_raw) if year_raw is not None else None
     except (TypeError, ValueError):
         year = None
 
@@ -184,7 +182,7 @@ def _record_to_paper(record: Mapping[str, Any]) -> Optional[DAOPaper]:
     # Preprint records have a journal name (always "bioRxiv" or
     # "medRxiv") and a pubYear, but no formal volume/issue/page numbers.
     # Surface the name only.
-    venue: Optional[Venue] = None
+    venue: Venue | None = None
     if journal:
         venue = Venue(name=journal)
     inline_citation = build_inline_citation(
@@ -220,16 +218,16 @@ def _record_to_paper(record: Mapping[str, Any]) -> Optional[DAOPaper]:
 def _build_params(
     query: str,
     max_results: int,
-    year_from: Optional[int],
-    year_to: Optional[int],
-) -> list[tuple[str, str]]:
+    year_from: int | None,
+    year_to: int | None,
+) -> HttpxParams:
     """Build an Europe PMC search-parameter list.
 
     ``SRC:PPR`` restricts to preprints; we then filter to bioRxiv +
     medRxiv client-side via ``journalTitle``. Year filtering uses
     ``PUB_YEAR:[lo TO hi]`` in Lucene-style.
     """
-    parts = [f"SRC:PPR", f"({query})"]
+    parts = ["SRC:PPR", f"({query})"]
     if year_from is not None or year_to is not None:
         lo = str(year_from) if year_from is not None else "1900"
         hi = str(year_to) if year_to is not None else "2099"
@@ -249,10 +247,10 @@ async def search_biorxiv_impl(
     query: str,
     max_results: int = 10,
     include_medrxiv: bool = True,
-    year_from: Optional[int] = None,
-    year_to: Optional[int] = None,
+    year_from: int | None = None,
+    year_to: int | None = None,
     *,
-    client: Optional[httpx.AsyncClient] = None,
+    client: httpx.AsyncClient | None = None,
 ) -> list[DAOPaper]:
     """Search bioRxiv (+ optionally medRxiv) preprints via Europe PMC.
 
@@ -268,8 +266,7 @@ async def search_biorxiv_impl(
         data = r.json()
         # Europe PMC nests results under ``resultList.result``.
         result_list = (data.get("resultList") or {}).get("result") or []
-        log.info("biorxiv.search raw_hits=%d total=%s",
-                 len(result_list), data.get("hitCount"))
+        log.info("biorxiv.search raw_hits=%d total=%s", len(result_list), data.get("hitCount"))
 
         papers: list[DAOPaper] = []
         for record in result_list:
@@ -300,8 +297,8 @@ def register(mcp: FastMCP) -> None:
         query: str,
         max_results: int = 10,
         include_medrxiv: bool = True,
-        year_from: Optional[int] = None,
-        year_to: Optional[int] = None,
+        year_from: int | None = None,
+        year_to: int | None = None,
     ) -> list[DAOPaper]:
         """Search bioRxiv (and optionally medRxiv) preprints. Strongest
         for ancient-DNA / paleogenomic / bioarchaeology preprints that

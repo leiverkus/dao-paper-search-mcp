@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Optional
 
 import httpx
 from bs4 import BeautifulSoup, Tag
@@ -35,7 +34,7 @@ ADAJ_SEARCH = f"{ADAJ_BASE}/Publications/Search"
 HTTP_TIMEOUT = 30.0
 
 
-def _absolute_url(href: str) -> Optional[str]:
+def _absolute_url(href: str) -> str | None:
     if not href:
         return None
     if href.startswith(("http://", "https://")):
@@ -45,11 +44,11 @@ def _absolute_url(href: str) -> Optional[str]:
     return None
 
 
-def _extract_text(tag: Optional[Tag], default: str = "") -> str:
+def _extract_text(tag: Tag | None, default: str = "") -> str:
     return tag.get_text(" ", strip=True) if tag else default
 
 
-def _parse_id_from_url(url: str) -> Optional[str]:
+def _parse_id_from_url(url: str) -> str | None:
     """Pull the numeric chapter/publication ID out of an ADAJ URL.
 
     ``/Publications/ViewChapterPublic/212`` -> ``"chapter:212"``
@@ -64,37 +63,38 @@ def _parse_id_from_url(url: str) -> Optional[str]:
     return None
 
 
-def _parse_result_tag(tag: Tag) -> Optional[DAOPaper]:
+def _parse_result_tag(tag: Tag) -> DAOPaper | None:
     title_anchor = tag.find("a", class_="search-result-title")
     if not isinstance(title_anchor, Tag):
         return None
     title = title_anchor.get_text(" ", strip=True)
     if not title:
         return None
-    landing = _absolute_url(title_anchor.get("href", ""))
+    href = title_anchor.get("href")
+    landing = _absolute_url(href) if isinstance(href, str) else None
 
     year_text = _extract_text(tag.find(class_="search-result-year"))
-    year: Optional[int] = None
+    year: int | None = None
     if year_text:
         m = re.search(r"\b(1[89]\d{2}|20\d{2}|21\d{2})\b", year_text)
         if m:
             year = int(m.group(1))
 
     # ADAJ can have multiple author anchors — collect them all.
-    authors = [
-        _extract_text(a)
-        for a in tag.find_all("a", class_="search-result-author")
-        if _extract_text(a)
-    ]
+    authors = [_extract_text(a) for a in tag.find_all("a", class_="search-result-author") if _extract_text(a)]
 
-    journal = _extract_text(tag.find(class_="search-result-publication"))
+    journal_raw = _extract_text(tag.find(class_="search-result-publication"))
     # The publication anchor inlines an italic "(SHAJ)" or "(ADAJ)" suffix —
     # the text-stripping above already preserves it on one line.
-    journal = re.sub(r"\s+", " ", journal).strip("/ ").strip() or None
+    journal: str | None = re.sub(r"\s+", " ", journal_raw).strip("/ ").strip() or None
 
     # Download URL points at the chapter PDF (open access in DoA archive).
     download = tag.find("a", class_="search-result-download")
-    pdf_url = _absolute_url(download.get("href", "")) if isinstance(download, Tag) else None
+    pdf_url: str | None = None
+    if isinstance(download, Tag):
+        dl_href = download.get("href")
+        if isinstance(dl_href, str):
+            pdf_url = _absolute_url(dl_href)
 
     pages_text = _extract_text(tag.find(class_="search-result-pages-count"))
     m = re.search(r"(\d+)\s+page", pages_text)
@@ -106,7 +106,7 @@ def _parse_result_tag(tag: Tag) -> Optional[DAOPaper]:
     chapter_id = _parse_id_from_url(landing or "") if landing else None
     doi_or_id = f"adaj:{chapter_id}" if chapter_id else f"adaj:{title[:48]}"
 
-    note: Optional[str] = None
+    note: str | None = None
     if pub_type and pub_type.lower() not in ("article", "chapter", "paper"):
         note = f"publication_type={pub_type}"
 
@@ -121,10 +121,10 @@ def _parse_result_tag(tag: Tag) -> Optional[DAOPaper]:
     # ("Annual of the Department of Antiquities of Jordan, vol. 56" or
     # "SHAJ XIV"). Parse a trailing volume token if present; otherwise
     # leave volume unset and use the full string as Venue.name.
-    venue: Optional[Venue] = None
+    venue: Venue | None = None
     if journal:
         v_name = journal
-        v_volume: Optional[str] = None
+        v_volume: str | None = None
         m_vol = re.search(r"(?:vol\.?\s*|volume\s+)([A-Za-z0-9]+)$", journal, re.I)
         if m_vol:
             v_volume = m_vol.group(1)
@@ -176,8 +176,8 @@ def _parse_results(html: str) -> list[DAOPaper]:
 
 def _filter_by_year(
     papers: list[DAOPaper],
-    year_from: Optional[int],
-    year_to: Optional[int],
+    year_from: int | None,
+    year_to: int | None,
 ) -> list[DAOPaper]:
     """Client-side year filter — see module docstring."""
     if year_from is None and year_to is None:
@@ -190,10 +190,10 @@ def _filter_by_year(
 async def search_adaj_impl(
     query: str,
     max_results: int = 10,
-    year_from: Optional[int] = None,
-    year_to: Optional[int] = None,
+    year_from: int | None = None,
+    year_to: int | None = None,
     *,
-    client: Optional[httpx.AsyncClient] = None,
+    client: httpx.AsyncClient | None = None,
 ) -> list[DAOPaper]:
     """Search the DoA publication archive (ADAJ + SHAJ + others)."""
     log.info("adaj.search query=%r year_from=%s year_to=%s", query, year_from, year_to)
@@ -225,8 +225,8 @@ def register(mcp: FastMCP) -> None:
     async def search_adaj(
         query: str,
         max_results: int = 10,
-        year_from: Optional[int] = None,
-        year_to: Optional[int] = None,
+        year_from: int | None = None,
+        year_to: int | None = None,
     ) -> list[DAOPaper]:
         """Search the DoA Publication Archive — ADAJ (Annual of the Department
         of Antiquities of Jordan), SHAJ (Studies in the History and Archaeology

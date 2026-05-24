@@ -20,7 +20,6 @@ from dao_paper_search_mcp.adapters.zenodo import (
 )
 from dao_paper_search_mcp.models import DAOPaper, PublicationStatus
 
-
 # Realistic Zenodo record — a DH software release (non-article type).
 SOFTWARE_RECORD = {
     "id": 1234567,
@@ -37,9 +36,7 @@ SOFTWARE_RECORD = {
         "language": "eng",
         "doi": "10.5281/zenodo.1234567",
     },
-    "files": [
-        {"links": {"self": "https://zenodo.org/api/records/1234567/files/v1.0.zip/content"}}
-    ],
+    "files": [{"links": {"self": "https://zenodo.org/api/records/1234567/files/v1.0.zip/content"}}],
 }
 
 # Article-type record — should not carry a verification_note.
@@ -97,14 +94,8 @@ def test_extract_year_handles_full_date_or_year_only() -> None:
 
 
 def test_resource_type_key_composition() -> None:
-    assert (
-        _resource_type_key({"resource_type": {"type": "software", "subtype": "main"}})
-        == "software-main"
-    )
-    assert (
-        _resource_type_key({"resource_type": {"type": "publication", "subtype": "article"}})
-        == "publication-article"
-    )
+    assert _resource_type_key({"resource_type": {"type": "software", "subtype": "main"}}) == "software-main"
+    assert _resource_type_key({"resource_type": {"type": "publication", "subtype": "article"}}) == "publication-article"
     # Top-level only when subtype is absent.
     assert _resource_type_key({"resource_type": {"type": "dataset"}}) == "dataset"
     assert _resource_type_key({}) is None
@@ -119,9 +110,7 @@ def test_verification_note_only_for_non_article_types() -> None:
 
 
 def test_open_access_url_picks_first_file() -> None:
-    assert _open_access_url(SOFTWARE_RECORD) == (
-        "https://zenodo.org/api/records/1234567/files/v1.0.zip/content"
-    )
+    assert _open_access_url(SOFTWARE_RECORD) == ("https://zenodo.org/api/records/1234567/files/v1.0.zip/content")
     assert _open_access_url(ARTICLE_RECORD) is None
     assert _open_access_url({"files": []}) is None
 
@@ -165,9 +154,7 @@ def test_record_to_paper_article_type() -> None:
     assert p.abstract == "Plain text abstract"
     # Inline citation: DOI present → Author-Year form.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown == (
-        "[(Mazar 2018)](https://doi.org/10.5281/zenodo.7654321)"
-    )
+    assert p.inline_citation.markdown == ("[(Mazar 2018)](https://doi.org/10.5281/zenodo.7654321)")
 
 
 def test_record_to_paper_software_flagged_in_verification_note() -> None:
@@ -180,13 +167,9 @@ def test_record_to_paper_software_flagged_in_verification_note() -> None:
     assert p.audit.warn_marker is False
     # Multi-author Author-Year against DOI.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown == (
-        "[(Schmidt & Kohli 2024)](https://doi.org/10.5281/zenodo.1234567)"
-    )
+    assert p.inline_citation.markdown == ("[(Schmidt & Kohli 2024)](https://doi.org/10.5281/zenodo.1234567)")
     # File download URL surfaces as open_access_url.
-    assert str(p.open_access_url) == (
-        "https://zenodo.org/api/records/1234567/files/v1.0.zip/content"
-    )
+    assert str(p.open_access_url) == ("https://zenodo.org/api/records/1234567/files/v1.0.zip/content")
 
 
 def test_record_to_paper_preprint_status() -> None:
@@ -226,9 +209,7 @@ async def test_search_zenodo_impl_happy_path() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_zenodo_impl_empty() -> None:
-    respx.get(ZENODO_API).mock(
-        return_value=httpx.Response(200, json={"hits": {"total": 0, "hits": []}})
-    )
+    respx.get(ZENODO_API).mock(return_value=httpx.Response(200, json={"hits": {"total": 0, "hits": []}}))
     assert await search_zenodo_impl("xyzzy") == []
 
 
@@ -243,9 +224,7 @@ async def test_search_zenodo_impl_http_error_propagates() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_zenodo_impl_query_params_forwarded() -> None:
-    route = respx.get(ZENODO_API).mock(
-        return_value=httpx.Response(200, json={"hits": {"total": 0, "hits": []}})
-    )
+    route = respx.get(ZENODO_API).mock(return_value=httpx.Response(200, json={"hits": {"total": 0, "hits": []}}))
     await search_zenodo_impl(
         "RAG corpus tools",
         max_results=3,

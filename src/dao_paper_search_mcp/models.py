@@ -11,13 +11,12 @@ so consumer logic does not need to change when those resolvers ship.
 
 from __future__ import annotations
 
-from enum import Enum
-from typing import List, Optional
+from enum import StrEnum
 
 from pydantic import BaseModel, Field, HttpUrl
 
 
-class PublicationStatus(str, Enum):
+class PublicationStatus(StrEnum):
     PUBLISHED = "published"
     FORTHCOMING = "forthcoming"
     PREPRINT = "preprint"
@@ -35,16 +34,16 @@ class ResolvedSite(BaseModel):
 
     gaz_id: str
     name_preferred: str
-    name_language: Optional[str] = None
-    name_variants: List[str] = Field(default_factory=list)
-    types: List[str] = Field(default_factory=list)
-    coordinates: Optional[tuple[float, float]] = None
-    parent_gaz_id: Optional[str] = None
-    ancestor_gaz_ids: List[str] = Field(default_factory=list)
-    pleiades_id: Optional[str] = None
-    geonames_id: Optional[str] = None
-    landing_page_url: Optional[HttpUrl] = None
-    verification_note: Optional[str] = None
+    name_language: str | None = None
+    name_variants: list[str] = Field(default_factory=list)
+    types: list[str] = Field(default_factory=list)
+    coordinates: tuple[float, float] | None = None
+    parent_gaz_id: str | None = None
+    ancestor_gaz_ids: list[str] = Field(default_factory=list)
+    pleiades_id: str | None = None
+    geonames_id: str | None = None
+    landing_page_url: HttpUrl | None = None
+    verification_note: str | None = None
 
 
 class ResolvedAuthor(BaseModel):
@@ -56,18 +55,18 @@ class ResolvedAuthor(BaseModel):
     """
 
     name_canonical: str
-    name_variants: List[str] = Field(default_factory=list)
-    q_id: Optional[str] = None
-    gnd_id: Optional[str] = None
-    orcid: Optional[str] = None
-    viaf_id: Optional[str] = None
-    domain: Optional[str] = None
-    affiliation_current: Optional[str] = None
-    birth_year: Optional[int] = None
-    death_year: Optional[int] = None
-    sites_associated: List[str] = Field(default_factory=list)
+    name_variants: list[str] = Field(default_factory=list)
+    q_id: str | None = None
+    gnd_id: str | None = None
+    orcid: str | None = None
+    viaf_id: str | None = None
+    domain: str | None = None
+    affiliation_current: str | None = None
+    birth_year: int | None = None
+    death_year: int | None = None
+    sites_associated: list[str] = Field(default_factory=list)
     source: str
-    verification_note: Optional[str] = None
+    verification_note: str | None = None
 
 
 class Identifiers(BaseModel):
@@ -79,16 +78,16 @@ class Identifiers(BaseModel):
     that field's prefix conventions.
     """
 
-    doi: Optional[str] = None
-    openalex_id: Optional[str] = None
-    zenon_id: Optional[str] = None
-    iaa_pub_id: Optional[str] = None
-    adaj_id: Optional[str] = None
-    semantic_scholar_id: Optional[str] = None
-    arxiv_id: Optional[str] = None
-    core_id: Optional[str] = None
-    europepmc_id: Optional[str] = None
-    propylaeum_id: Optional[str] = None
+    doi: str | None = None
+    openalex_id: str | None = None
+    zenon_id: str | None = None
+    iaa_pub_id: str | None = None
+    adaj_id: str | None = None
+    semantic_scholar_id: str | None = None
+    arxiv_id: str | None = None
+    core_id: str | None = None
+    europepmc_id: str | None = None
+    propylaeum_id: str | None = None
 
 
 class Audit(BaseModel):
@@ -101,7 +100,7 @@ class Audit(BaseModel):
 
     primary_source: bool = True
     aggregator: bool = False
-    verification_note: Optional[str] = None
+    verification_note: str | None = None
     warn_marker: bool = False
 
 
@@ -115,10 +114,10 @@ class Venue(BaseModel):
     defensively.
     """
 
-    name: Optional[str] = None
-    volume: Optional[str] = None
-    issue: Optional[str] = None
-    pages: Optional[str] = None
+    name: str | None = None
+    volume: str | None = None
+    issue: str | None = None
+    pages: str | None = None
 
 
 class InlineCitation(BaseModel):
@@ -165,10 +164,10 @@ class InlineCitation(BaseModel):
       with no URL anchor.
     """
 
-    url: Optional[HttpUrl] = None
+    url: HttpUrl | None = None
     markdown: str
-    authoritative_authors_label: Optional[str] = None
-    authoritative_bibliography_line: Optional[str] = None
+    authoritative_authors_label: str | None = None
+    authoritative_bibliography_line: str | None = None
     fallback_text: str
 
 
@@ -201,26 +200,26 @@ class DAOPaper(BaseModel):
     """
 
     title: str
-    authors: List[str] = Field(default_factory=list)
-    authors_resolved: Optional[List[ResolvedAuthor]] = None
-    year: Optional[int] = None
-    journal_or_volume: Optional[str] = None
-    pages: Optional[str] = None
+    authors: list[str] = Field(default_factory=list)
+    authors_resolved: list[ResolvedAuthor] | None = None
+    year: int | None = None
+    journal_or_volume: str | None = None
+    pages: str | None = None
     doi_or_id: str
     source: str
-    open_access_url: Optional[HttpUrl] = None
-    landing_page_url: Optional[HttpUrl] = None
+    open_access_url: HttpUrl | None = None
+    landing_page_url: HttpUrl | None = None
 
     language: str = "und"
-    abstract: Optional[str] = None
+    abstract: str | None = None
 
-    site_ids: List[str] = Field(default_factory=list)
-    periods: List[str] = Field(default_factory=list)
-    regions: List[str] = Field(default_factory=list)
+    site_ids: list[str] = Field(default_factory=list)
+    periods: list[str] = Field(default_factory=list)
+    regions: list[str] = Field(default_factory=list)
 
     publication_status: PublicationStatus = PublicationStatus.UNKNOWN
-    verification_note: Optional[str] = None
+    verification_note: str | None = None
 
-    identifiers: Optional[Identifiers] = None
-    audit: Optional[Audit] = None
-    inline_citation: Optional[InlineCitation] = None
+    identifiers: Identifiers | None = None
+    audit: Audit | None = None
+    inline_citation: InlineCitation | None = None

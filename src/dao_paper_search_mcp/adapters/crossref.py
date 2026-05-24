@@ -28,13 +28,15 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 import httpx
 from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
+from ..utils import HttpxParams
 from ..utils.contact import CONTACT_EMAIL
 from ..utils.doi import normalize_doi
 
@@ -45,11 +47,7 @@ HTTP_TIMEOUT = 30.0
 
 # Polite-pool identification — bumps us out of the public bucket and
 # into the higher-priority queue.
-_USER_AGENT = (
-    "dao-paper-search-mcp/0.1 "
-    "(+https://github.com/leiverkus/dao-paper-search-mcp; "
-    f"mailto:{CONTACT_EMAIL})"
-)
+_USER_AGENT = f"dao-paper-search-mcp/0.1 (+https://github.com/leiverkus/dao-paper-search-mcp; mailto:{CONTACT_EMAIL})"
 
 # Strip JATS markup such as ``<jats:p>…</jats:p>`` so the abstract is
 # readable plain text. Crossref embeds JATS XML inside the abstract
@@ -58,7 +56,7 @@ _JATS_TAG_RE = re.compile(r"<[^>]+>")
 _JATS_WS_RE = re.compile(r"\s+")
 
 
-def _first_or_none(seq: Any) -> Optional[str]:
+def _first_or_none(seq: Any) -> str | None:
     """Return the first string in a list-like, or None."""
     if isinstance(seq, list) and seq:
         v = seq[0]
@@ -89,7 +87,7 @@ def _format_authors(item: Mapping[str, Any]) -> list[str]:
     return out
 
 
-def _extract_year(item: Mapping[str, Any]) -> Optional[int]:
+def _extract_year(item: Mapping[str, Any]) -> int | None:
     """Pull the first year from ``published`` / ``issued`` / ``created``.
 
     Crossref's date provenance is messy: ``published-print`` and
@@ -112,7 +110,7 @@ def _extract_year(item: Mapping[str, Any]) -> Optional[int]:
     return None
 
 
-def _format_journal_or_volume(item: Mapping[str, Any]) -> Optional[str]:
+def _format_journal_or_volume(item: Mapping[str, Any]) -> str | None:
     """Render ``"Journal Name 12(3)"`` or ``"Journal Name 12"`` or None."""
     title = _first_or_none(item.get("container-title"))
     if not title:
@@ -126,7 +124,7 @@ def _format_journal_or_volume(item: Mapping[str, Any]) -> Optional[str]:
     return title
 
 
-def _build_venue(item: Mapping[str, Any]) -> Optional[Venue]:
+def _build_venue(item: Mapping[str, Any]) -> Venue | None:
     name = _first_or_none(item.get("container-title"))
     volume = (item.get("volume") or "").strip() or None
     issue = (item.get("issue") or "").strip() or None
@@ -144,7 +142,7 @@ def _full_title(item: Mapping[str, Any]) -> str:
     return title or "(untitled)"
 
 
-def _strip_jats(abstract: Optional[str]) -> Optional[str]:
+def _strip_jats(abstract: str | None) -> str | None:
     if not abstract:
         return None
     text = _JATS_TAG_RE.sub("", abstract)
@@ -152,7 +150,7 @@ def _strip_jats(abstract: Optional[str]) -> Optional[str]:
     return text or None
 
 
-def _publication_status_from_type(item_type: Optional[str]) -> PublicationStatus:
+def _publication_status_from_type(item_type: str | None) -> PublicationStatus:
     """Map Crossref ``type`` to our enum.
 
     ``posted-content`` is Crossref's term for preprints; everything else
@@ -165,7 +163,7 @@ def _publication_status_from_type(item_type: Optional[str]) -> PublicationStatus
     return PublicationStatus.PUBLISHED
 
 
-def _item_to_paper(item: Mapping[str, Any]) -> Optional[DAOPaper]:
+def _item_to_paper(item: Mapping[str, Any]) -> DAOPaper | None:
     doi = normalize_doi(item.get("DOI"))
     if not doi:
         # Without a DOI we have no stable identifier and no link target —
@@ -217,9 +215,9 @@ def _item_to_paper(item: Mapping[str, Any]) -> Optional[DAOPaper]:
 def _build_params(
     query: str,
     max_results: int,
-    year_from: Optional[int],
-    year_to: Optional[int],
-) -> list[tuple[str, str]]:
+    year_from: int | None,
+    year_to: int | None,
+) -> HttpxParams:
     """Build a Crossref ``/works`` parameter list.
 
     Uses ``query.bibliographic`` for free-text (broader than ``query``,
@@ -227,7 +225,7 @@ def _build_params(
     single comma-joined ``filter`` value because Crossref expects all
     filters in one parameter.
     """
-    params: list[tuple[str, str]] = [
+    params: HttpxParams = [
         ("query.bibliographic", query),
         ("rows", str(max(1, min(max_results, 100)))),
     ]
@@ -244,10 +242,10 @@ def _build_params(
 async def search_crossref_impl(
     query: str,
     max_results: int = 10,
-    year_from: Optional[int] = None,
-    year_to: Optional[int] = None,
+    year_from: int | None = None,
+    year_to: int | None = None,
     *,
-    client: Optional[httpx.AsyncClient] = None,
+    client: httpx.AsyncClient | None = None,
 ) -> list[DAOPaper]:
     """Search Crossref. ``client`` is injectable for tests."""
     params = _build_params(query, max_results, year_from, year_to)
@@ -259,8 +257,7 @@ async def search_crossref_impl(
         r.raise_for_status()
         data = r.json()
         items = (data.get("message") or {}).get("items") or []
-        log.info("crossref.search hits=%d total=%s", len(items),
-                 (data.get("message") or {}).get("total-results"))
+        log.info("crossref.search hits=%d total=%s", len(items), (data.get("message") or {}).get("total-results"))
         papers = [_item_to_paper(item) for item in items]
         return [p for p in papers if p is not None]
 
@@ -277,8 +274,8 @@ def register(mcp: FastMCP) -> None:
     async def search_crossref(
         query: str,
         max_results: int = 10,
-        year_from: Optional[int] = None,
-        year_to: Optional[int] = None,
+        year_from: int | None = None,
+        year_to: int | None = None,
     ) -> list[DAOPaper]:
         """Search Crossref — the canonical DOI registry, ~150M scholarly works.
         Use for verifying mainstream peer-reviewed Anglophone literature

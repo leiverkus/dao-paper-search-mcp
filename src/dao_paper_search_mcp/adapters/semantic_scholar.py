@@ -31,13 +31,15 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 import httpx
 from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
+from ..utils import HttpxParams
 from ..utils.contact import CONTACT_EMAIL
 from ..utils.doi import normalize_doi
 
@@ -46,28 +48,26 @@ log = logging.getLogger(__name__)
 S2_API = "https://api.semanticscholar.org/graph/v1/paper/search"
 HTTP_TIMEOUT = 30.0
 
-_USER_AGENT = (
-    "dao-paper-search-mcp/0.1 "
-    "(+https://github.com/leiverkus/dao-paper-search-mcp; "
-    f"mailto:{CONTACT_EMAIL})"
-)
+_USER_AGENT = f"dao-paper-search-mcp/0.1 (+https://github.com/leiverkus/dao-paper-search-mcp; mailto:{CONTACT_EMAIL})"
 
 # Fields we request from the S2 graph API. Restricting fields shrinks
 # response payloads and is faster than the default fat record.
-_S2_FIELDS = ",".join([
-    "paperId",
-    "externalIds",
-    "title",
-    "abstract",
-    "year",
-    "authors",
-    "venue",
-    "journal",
-    "publicationDate",
-    "publicationTypes",
-    "citationCount",
-    "openAccessPdf",
-])
+_S2_FIELDS = ",".join(
+    [
+        "paperId",
+        "externalIds",
+        "title",
+        "abstract",
+        "year",
+        "authors",
+        "venue",
+        "journal",
+        "publicationDate",
+        "publicationTypes",
+        "citationCount",
+        "openAccessPdf",
+    ]
+)
 
 
 def _format_authors(paper: Mapping[str, Any]) -> list[str]:
@@ -93,7 +93,7 @@ def _format_authors(paper: Mapping[str, Any]) -> list[str]:
     return out
 
 
-def _format_journal_or_volume(paper: Mapping[str, Any]) -> Optional[str]:
+def _format_journal_or_volume(paper: Mapping[str, Any]) -> str | None:
     """Render ``"Journal Name 12(3)"`` from ``journal`` (preferred) or
     fall back to the free-text ``venue`` field.
 
@@ -113,7 +113,7 @@ def _format_journal_or_volume(paper: Mapping[str, Any]) -> Optional[str]:
     return venue or None
 
 
-def _format_pages(paper: Mapping[str, Any]) -> Optional[str]:
+def _format_pages(paper: Mapping[str, Any]) -> str | None:
     journal = paper.get("journal") or {}
     if isinstance(journal, dict):
         pages = (journal.get("pages") or "").strip()
@@ -121,7 +121,7 @@ def _format_pages(paper: Mapping[str, Any]) -> Optional[str]:
     return None
 
 
-def _build_venue(paper: Mapping[str, Any]) -> Optional[Venue]:
+def _build_venue(paper: Mapping[str, Any]) -> Venue | None:
     """Map S2 ``journal`` / ``venue`` into structured Venue.
 
     Issue is not exposed in S2's payload — only name/volume/pages. The
@@ -129,9 +129,9 @@ def _build_venue(paper: Mapping[str, Any]) -> Optional[Venue]:
     when no structured ``journal`` is present.
     """
     journal = paper.get("journal") or {}
-    name: Optional[str] = None
-    volume: Optional[str] = None
-    pages: Optional[str] = None
+    name: str | None = None
+    volume: str | None = None
+    pages: str | None = None
     if isinstance(journal, dict):
         name = (journal.get("name") or "").strip() or None
         volume = (journal.get("volume") or "").strip() or None
@@ -152,14 +152,12 @@ def _publication_status(paper: Mapping[str, Any]) -> PublicationStatus:
     no journal venue is attached.
     """
     types = paper.get("publicationTypes") or []
-    if isinstance(types, list) and any(
-        isinstance(t, str) and t.lower() == "preprint" for t in types
-    ):
+    if isinstance(types, list) and any(isinstance(t, str) and t.lower() == "preprint" for t in types):
         return PublicationStatus.PREPRINT
     return PublicationStatus.PUBLISHED
 
 
-def _open_access_url(paper: Mapping[str, Any]) -> Optional[str]:
+def _open_access_url(paper: Mapping[str, Any]) -> str | None:
     oa = paper.get("openAccessPdf") or {}
     if isinstance(oa, dict):
         url = (oa.get("url") or "").strip()
@@ -167,7 +165,7 @@ def _open_access_url(paper: Mapping[str, Any]) -> Optional[str]:
     return None
 
 
-def _verification_note(paper: Mapping[str, Any]) -> Optional[str]:
+def _verification_note(paper: Mapping[str, Any]) -> str | None:
     """Surface the citation count so the agent can rank candidates.
 
     ``citationCount`` is a soft signal — high counts indicate
@@ -181,7 +179,7 @@ def _verification_note(paper: Mapping[str, Any]) -> Optional[str]:
     return None
 
 
-def _paper_to_paper(paper: Mapping[str, Any]) -> Optional[DAOPaper]:
+def _paper_to_paper(paper: Mapping[str, Any]) -> DAOPaper | None:
     external = paper.get("externalIds") or {}
     if not isinstance(external, dict):
         external = {}
@@ -264,16 +262,16 @@ def _paper_to_paper(paper: Mapping[str, Any]) -> Optional[DAOPaper]:
 def _build_params(
     query: str,
     max_results: int,
-    year_from: Optional[int],
-    year_to: Optional[int],
-) -> list[tuple[str, str]]:
+    year_from: int | None,
+    year_to: int | None,
+) -> HttpxParams:
     """Build an S2 ``/paper/search`` parameter list.
 
     Year filter is a single ``year=YYYY-YYYY`` parameter (open-ended on
     either side: ``2010-`` for "2010 or later", ``-2010`` for "up to
     2010"). We always send ``fields`` to keep payloads small.
     """
-    params: list[tuple[str, str]] = [
+    params: HttpxParams = [
         ("query", query),
         ("limit", str(max(1, min(max_results, 100)))),
         ("fields", _S2_FIELDS),
@@ -288,15 +286,14 @@ def _build_params(
 async def search_semantic_scholar_impl(
     query: str,
     max_results: int = 10,
-    year_from: Optional[int] = None,
-    year_to: Optional[int] = None,
+    year_from: int | None = None,
+    year_to: int | None = None,
     *,
-    client: Optional[httpx.AsyncClient] = None,
+    client: httpx.AsyncClient | None = None,
 ) -> list[DAOPaper]:
     """Search Semantic Scholar. ``client`` is injectable for tests."""
     params = _build_params(query, max_results, year_from, year_to)
-    log.info("s2.search query=%r filters=%s", query,
-             [p for p in params if p[0] == "year"])
+    log.info("s2.search query=%r filters=%s", query, [p for p in params if p[0] == "year"])
 
     headers: dict[str, str] = {
         "User-Agent": _USER_AGENT,
@@ -328,8 +325,8 @@ def register(mcp: FastMCP) -> None:
     async def search_semantic_scholar(
         query: str,
         max_results: int = 10,
-        year_from: Optional[int] = None,
-        year_to: Optional[int] = None,
+        year_from: int | None = None,
+        year_to: int | None = None,
     ) -> list[DAOPaper]:
         """Search Semantic Scholar — citation graph + cross-source IDs.
         Strongest for: discovering recently-cited variants of a known

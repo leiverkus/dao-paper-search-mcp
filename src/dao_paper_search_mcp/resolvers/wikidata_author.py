@@ -23,7 +23,7 @@ import logging
 import os
 import re
 from importlib import resources
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 import yaml
@@ -38,10 +38,7 @@ WIKIDATA_SPARQL = "https://query.wikidata.org/sparql"
 GND_LOOKUP = "https://lobid.org/gnd/search"
 HTTP_TIMEOUT = 20.0
 
-_DEFAULT_UA = (
-    "dao-paper-search-mcp/0.1 (https://github.com/leiverkus/dao-paper-search-mcp;"
-    f" {CONTACT_EMAIL})"
-)
+_DEFAULT_UA = f"dao-paper-search-mcp/0.1 (https://github.com/leiverkus/dao-paper-search-mcp; {CONTACT_EMAIL})"
 
 
 def _user_agent() -> str:
@@ -59,7 +56,7 @@ def _normalise(name: str) -> str:
     return re.sub(r"\s+", " ", s)
 
 
-_OVERRIDES_CACHE: Optional[list[dict[str, Any]]] = None
+_OVERRIDES_CACHE: list[dict[str, Any]] | None = None
 
 
 def _load_overrides() -> list[dict[str, Any]]:
@@ -77,7 +74,7 @@ def _load_overrides() -> list[dict[str, Any]]:
     return _OVERRIDES_CACHE
 
 
-def _override_match(name: str, overrides: list[dict[str, Any]]) -> Optional[ResolvedAuthor]:
+def _override_match(name: str, overrides: list[dict[str, Any]]) -> ResolvedAuthor | None:
     target = _normalise(name)
     for entry in overrides:
         canonical = entry.get("canonical", "")
@@ -128,12 +125,12 @@ LIMIT 10
 """.strip()
 
 
-def _q_id_from_uri(uri: str) -> Optional[str]:
+def _q_id_from_uri(uri: str) -> str | None:
     m = re.search(r"(Q\d+)$", uri or "")
     return m.group(1) if m else None
 
 
-def _year_from_date(s: Optional[str]) -> Optional[int]:
+def _year_from_date(s: str | None) -> int | None:
     if not s:
         return None
     m = re.match(r"(-?\d{4})", s)
@@ -142,7 +139,7 @@ def _year_from_date(s: Optional[str]) -> Optional[int]:
 
 def _score_candidate(
     binding: dict[str, dict[str, str]],
-    domain_hint: Optional[str],
+    domain_hint: str | None,
 ) -> int:
     """Rough scoring — affiliation match > ORCID present > GND present."""
     score = 0
@@ -160,7 +157,7 @@ def _score_candidate(
 
 def _binding_to_author(
     binding: dict[str, dict[str, str]],
-    note: Optional[str] = None,
+    note: str | None = None,
 ) -> ResolvedAuthor:
     return ResolvedAuthor(
         name_canonical=(binding.get("personLabel") or {}).get("value", "(unknown)"),
@@ -177,7 +174,7 @@ def _binding_to_author(
 
 async def _query_wikidata(
     name: str,
-    domain_hint: Optional[str],
+    domain_hint: str | None,
     client: httpx.AsyncClient,
 ) -> list[ResolvedAuthor]:
     headers = {
@@ -201,11 +198,7 @@ async def _query_wikidata(
     top_score = scored[0][0]
     top = [b for s, b in scored if s == top_score]
 
-    note = (
-        f"Multiple Wikidata candidates with score {top_score}; agent must verify."
-        if len(top) > 1
-        else None
-    )
+    note = f"Multiple Wikidata candidates with score {top_score}; agent must verify." if len(top) > 1 else None
     return [_binding_to_author(b, note=note) for b in top]
 
 
@@ -218,21 +211,34 @@ async def _query_wikidata(
 _OFF_DOMAIN_PROFESSIONS_BY_HINT: dict[str, frozenset[str]] = {
     "archaeology": frozenset(
         {
-            "rabbiner", "rabbi",
-            "theologe", "theologin", "theologian",
-            "pfarrer", "pastor",
-            "mediziner", "arzt", "physician",
-            "jurist", "rechtsanwalt", "lawyer",
-            "komponist", "musiker", "musician",
-            "schauspieler", "actor",
-            "politiker", "politician",
-            "kaufmann", "merchant",
+            "rabbiner",
+            "rabbi",
+            "theologe",
+            "theologin",
+            "theologian",
+            "pfarrer",
+            "pastor",
+            "mediziner",
+            "arzt",
+            "physician",
+            "jurist",
+            "rechtsanwalt",
+            "lawyer",
+            "komponist",
+            "musiker",
+            "musician",
+            "schauspieler",
+            "actor",
+            "politiker",
+            "politician",
+            "kaufmann",
+            "merchant",
         }
     ),
 }
 
 
-def _gnd_query_with_hint(name: str, domain_hint: Optional[str]) -> str:
+def _gnd_query_with_hint(name: str, domain_hint: str | None) -> str:
     """Bias lobid's relevance ranking by appending a German domain keyword.
     ``archaeology`` → ``Archäologie``; other hints pass through verbatim."""
     if not domain_hint:
@@ -241,7 +247,7 @@ def _gnd_query_with_hint(name: str, domain_hint: Optional[str]) -> str:
     return f"{name} {canonical}"
 
 
-def _gnd_record_passes_domain(record: dict[str, Any], domain_hint: Optional[str]) -> bool:
+def _gnd_record_passes_domain(record: dict[str, Any], domain_hint: str | None) -> bool:
     """Drop GND hits whose only profession is on the off-domain blacklist
     for this hint. Records with no profession data are kept (we have no
     grounds to reject them)."""
@@ -264,7 +270,7 @@ def _gnd_record_passes_domain(record: dict[str, Any], domain_hint: Optional[str]
 
 async def _query_gnd(
     name: str,
-    domain_hint: Optional[str],
+    domain_hint: str | None,
     client: httpx.AsyncClient,
 ) -> list[ResolvedAuthor]:
     """Lobid.org wraps the GND with a clean JSON API. Restricted to
@@ -313,7 +319,7 @@ async def resolve_author_impl(
     name_string: str,
     domain_hint: str = "archaeology",
     *,
-    client: Optional[httpx.AsyncClient] = None,
+    client: httpx.AsyncClient | None = None,
 ) -> ResolvedAuthor:
     """Resolve an author name. See module docstring for resolution order."""
     log.info("resolve_author name=%r domain_hint=%r", name_string, domain_hint)

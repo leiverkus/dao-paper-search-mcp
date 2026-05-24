@@ -23,7 +23,6 @@ from dao_paper_search_mcp.adapters.crossref import (
 )
 from dao_paper_search_mcp.models import DAOPaper, PublicationStatus
 
-
 # Realistic Crossref item for Cohen 1979 BASOR — minimal viable shape.
 COHEN_1979_ITEM = {
     "DOI": "10.2307/1356668",
@@ -43,10 +42,7 @@ COHEN_1979_ITEM = {
 BOARETTO_2010_ITEM = {
     "DOI": "10.1017/s0033822200044982",
     "type": "journal-article",
-    "title": [
-        "Radiocarbon Results from the Iron IIA Site of Atar Haroa in the "
-        "Negev Highlands"
-    ],
+    "title": ["Radiocarbon Results from the Iron IIA Site of Atar Haroa in the Negev Highlands"],
     "container-title": ["Radiocarbon"],
     "volume": "52",
     "issue": "1",
@@ -76,9 +72,7 @@ def test_full_title_merges_subtitle() -> None:
 
 def test_full_title_skips_redundant_subtitle() -> None:
     """If the subtitle is already contained in the title, don't double it."""
-    out = _full_title(
-        {"title": ["Main Title and the sub story"], "subtitle": ["the sub story"]}
-    )
+    out = _full_title({"title": ["Main Title and the sub story"], "subtitle": ["the sub story"]})
     assert out == "Main Title and the sub story"
 
 
@@ -111,9 +105,7 @@ def test_extract_year_prefers_published_print() -> None:
 
 
 def test_format_journal_or_volume_combines() -> None:
-    assert _format_journal_or_volume(COHEN_1979_ITEM) == (
-        "Bulletin of the American Schools of Oriental Research 236"
-    )
+    assert _format_journal_or_volume(COHEN_1979_ITEM) == ("Bulletin of the American Schools of Oriental Research 236")
     assert _format_journal_or_volume(BOARETTO_2010_ITEM) == "Radiocarbon 52(1)"
     assert _format_journal_or_volume({}) is None
 
@@ -164,9 +156,7 @@ def test_item_to_paper_single_author_authoryear_form() -> None:
     assert p.identifiers is not None and p.identifiers.doi == "10.2307/1356668"
     # Inline citation — Author-Year form via DOI.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown == (
-        "[(Cohen 1979)](https://doi.org/10.2307/1356668)"
-    )
+    assert p.inline_citation.markdown == ("[(Cohen 1979)](https://doi.org/10.2307/1356668)")
 
 
 def test_item_to_paper_three_authors_explicit_inline_form() -> None:
@@ -176,8 +166,7 @@ def test_item_to_paper_three_authors_explicit_inline_form() -> None:
     assert len(p.authors) == 3
     assert p.inline_citation is not None
     assert p.inline_citation.markdown == (
-        "[(Boaretto, Finkelstein & Shahack-Gross 2010)]"
-        "(https://doi.org/10.1017/s0033822200044982)"
+        "[(Boaretto, Finkelstein & Shahack-Gross 2010)](https://doi.org/10.1017/s0033822200044982)"
     )
     # Schema v2: structured bibliography line comes from Venue metadata.
     assert p.inline_citation.authoritative_bibliography_line == (

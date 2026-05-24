@@ -16,7 +16,6 @@ import respx
 from dao_paper_search_mcp.adapters import (  # noqa: F401 - ensures package import works
     zenon,
 )
-from dao_paper_search_mcp.models import ResolvedAuthor
 from dao_paper_search_mcp.resolvers.wikidata_author import (
     GND_LOOKUP,
     WIKIDATA_SPARQL,
@@ -39,9 +38,7 @@ CHAFETZ_CHAIM_GND_RECORD = {
     "preferredName": "Kahan, Israel M.",
     "gndIdentifier": "119150530",
     "variantName": ["Chafetz Chaim", "Hafets Hayim", "Hofets Hayim"],
-    "professionOrOccupation": [
-        {"id": "https://d-nb.info/gnd/4176751-2", "label": "Rabbiner"}
-    ],
+    "professionOrOccupation": [{"id": "https://d-nb.info/gnd/4176751-2", "label": "Rabbiner"}],
     "dateOfBirth": ["1838"],
     "dateOfDeath": ["1933"],
 }
@@ -240,12 +237,8 @@ async def test_resolve_author_impl_does_not_leak_chafetz_chaim_for_archaeology()
     """End-to-end regression: 'Yisrael Cohen' with default domain_hint
     must NOT resolve to Chafetz Chaim. Either no result or a flagged
     one is acceptable; the rabbi himself is not."""
-    respx.get(WIKIDATA_SPARQL).mock(
-        return_value=httpx.Response(200, json={"results": {"bindings": []}})
-    )
-    respx.get(GND_LOOKUP).mock(
-        return_value=httpx.Response(200, json={"member": [CHAFETZ_CHAIM_GND_RECORD]})
-    )
+    respx.get(WIKIDATA_SPARQL).mock(return_value=httpx.Response(200, json={"results": {"bindings": []}}))
+    respx.get(GND_LOOKUP).mock(return_value=httpx.Response(200, json={"member": [CHAFETZ_CHAIM_GND_RECORD]}))
     result = await resolve_author_impl("Yisrael Cohen", domain_hint="archaeology")
     assert result.gnd_id != "119150530"
     assert result.source == "unresolved"
@@ -257,17 +250,13 @@ async def test_resolve_author_impl_does_not_leak_chafetz_chaim_for_archaeology()
 async def test_resolve_author_impl_returns_gnd_with_profession_in_note() -> None:
     """When a non-blacklisted GND hit comes through, the note should
     surface the profession label so the agent can audit the match."""
-    respx.get(WIKIDATA_SPARQL).mock(
-        return_value=httpx.Response(200, json={"results": {"bindings": []}})
-    )
+    respx.get(WIKIDATA_SPARQL).mock(return_value=httpx.Response(200, json={"results": {"bindings": []}}))
     archaeologist_record = {
         "preferredName": "Müller, Hans",
         "gndIdentifier": "123456789",
         "professionOrOccupation": [{"label": "Archäologe"}],
     }
-    respx.get(GND_LOOKUP).mock(
-        return_value=httpx.Response(200, json={"member": [archaeologist_record]})
-    )
+    respx.get(GND_LOOKUP).mock(return_value=httpx.Response(200, json={"member": [archaeologist_record]}))
     result = await resolve_author_impl("Hans Müller", domain_hint="archaeology")
     assert result.source == "gnd"
     assert result.gnd_id == "123456789"
@@ -278,9 +267,7 @@ async def test_resolve_author_impl_returns_gnd_with_profession_in_note() -> None
 @pytest.mark.asyncio
 @respx.mock
 async def test_resolve_author_impl_wikidata_empty_falls_through_to_gnd() -> None:
-    respx.get(WIKIDATA_SPARQL).mock(
-        return_value=httpx.Response(200, json={"results": {"bindings": []}})
-    )
+    respx.get(WIKIDATA_SPARQL).mock(return_value=httpx.Response(200, json={"results": {"bindings": []}}))
     respx.get(GND_LOOKUP).mock(
         return_value=httpx.Response(
             200,
@@ -302,9 +289,7 @@ async def test_resolve_author_impl_wikidata_empty_falls_through_to_gnd() -> None
 @pytest.mark.asyncio
 @respx.mock
 async def test_resolve_author_impl_unresolved_when_everything_empty() -> None:
-    respx.get(WIKIDATA_SPARQL).mock(
-        return_value=httpx.Response(200, json={"results": {"bindings": []}})
-    )
+    respx.get(WIKIDATA_SPARQL).mock(return_value=httpx.Response(200, json={"results": {"bindings": []}}))
     respx.get(GND_LOOKUP).mock(return_value=httpx.Response(200, json={"member": []}))
     result = await resolve_author_impl("Definitely Not Real Scholar")
     assert result.source == "unresolved"

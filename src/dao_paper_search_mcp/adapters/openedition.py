@@ -57,13 +57,13 @@ import logging
 import re
 import time
 import xml.etree.ElementTree as ET
-from typing import Optional
 
 import httpx
 from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus
+from ..utils import HttpxParams
 from ..utils.contact import CONTACT_EMAIL
 from ..utils.doi import normalize_doi
 
@@ -72,11 +72,7 @@ log = logging.getLogger(__name__)
 OPENEDITION_OAI = "https://metadata.openedition.org/oai"
 HTTP_TIMEOUT = 30.0
 
-_USER_AGENT = (
-    "dao-paper-search-mcp/0.1 "
-    "(+https://github.com/leiverkus/dao-paper-search-mcp; "
-    f"mailto:{CONTACT_EMAIL})"
-)
+_USER_AGENT = f"dao-paper-search-mcp/0.1 (+https://github.com/leiverkus/dao-paper-search-mcp; mailto:{CONTACT_EMAIL})"
 
 _MAX_PAGES = 3
 _BUDGET_SECONDS = 40.0
@@ -88,7 +84,7 @@ _NS = {
 }
 
 # Friendly set names → OAI setSpec. ``None`` means no set filter.
-_SETS: dict[str, Optional[str]] = {
+_SETS: dict[str, str | None] = {
     "journals": "journals",
     "books": "books",
     "all": None,
@@ -110,7 +106,7 @@ _OPENEDITION_DOMAINS = (
 )
 
 
-def _resolve_set_spec(collection: Optional[str]) -> Optional[str]:
+def _resolve_set_spec(collection: str | None) -> str | None:
     """Map user-facing collection name to OAI setSpec.
 
     ``None`` or empty → default (journals). ``"all"`` → no set filter.
@@ -126,7 +122,7 @@ def _resolve_set_spec(collection: Optional[str]) -> Optional[str]:
 
 def _classify_identifiers(
     identifier_texts: list[str],
-) -> tuple[Optional[str], Optional[str]]:
+) -> tuple[str | None, str | None]:
     """Sort ``dc:identifier`` values into (doi, landing_url).
 
     OpenEdition records carry:
@@ -137,9 +133,9 @@ def _classify_identifiers(
     Info URIs (``info:eu-repo/…``) are skipped.
     DOI takes priority over landing; Handle is used as landing fallback.
     """
-    doi: Optional[str] = None
-    openedition_landing: Optional[str] = None
-    handle_landing: Optional[str] = None
+    doi: str | None = None
+    openedition_landing: str | None = None
+    handle_landing: str | None = None
 
     for text in identifier_texts:
         s = text.strip()
@@ -168,15 +164,15 @@ def _classify_identifiers(
     return doi, landing
 
 
-def _extract_year(date_texts: list[str]) -> Optional[int]:
+def _extract_year(date_texts: list[str]) -> int | None:
     """Extract the publication year from a list of ``dc:date`` values.
 
     OpenEdition emits both a bare year (``"2019"``) and an info URI
     (``"info:eu-repo/date/publication/2019-12-08"``). We prefer the bare
     form; info URIs are a fallback.
     """
-    bare: Optional[int] = None
-    info_year: Optional[int] = None
+    bare: int | None = None
+    info_year: int | None = None
     for text in date_texts:
         s = text.strip()
         if not s:
@@ -203,11 +199,7 @@ def _extract_year(date_texts: list[str]) -> Optional[int]:
 
 def _extract_texts(elements: list[ET.Element]) -> list[str]:
     """Return non-empty text content from a list of elements."""
-    return [
-        (e.text or "").strip()
-        for e in elements
-        if e is not None and e.text and e.text.strip()
-    ]
+    return [(e.text or "").strip() for e in elements if e is not None and e.text and e.text.strip()]
 
 
 def _query_tokens(query: str) -> list[str]:
@@ -223,13 +215,11 @@ def _record_matches(
 ) -> bool:
     if not tokens:
         return True
-    haystack = " ".join(
-        [title, description, " ".join(subjects), " ".join(authors)]
-    ).lower()
+    haystack = " ".join([title, description, " ".join(subjects), " ".join(authors)]).lower()
     return all(tok in haystack for tok in tokens)
 
 
-def _record_to_paper(record: ET.Element, tokens: list[str]) -> Optional[DAOPaper]:
+def _record_to_paper(record: ET.Element, tokens: list[str]) -> DAOPaper | None:
     """Convert one OAI record to a ``DAOPaper`` if keyword-matched."""
     metadata = record.find("oai:metadata", _NS)
     if metadata is None:
@@ -314,11 +304,11 @@ def _record_to_paper(record: ET.Element, tokens: list[str]) -> Optional[DAOPaper
 
 
 def _build_initial_params(
-    set_spec: Optional[str],
-    year_from: Optional[int],
-    year_to: Optional[int],
-) -> list[tuple[str, str]]:
-    params: list[tuple[str, str]] = [
+    set_spec: str | None,
+    year_from: int | None,
+    year_to: int | None,
+) -> HttpxParams:
+    params: HttpxParams = [
         ("verb", "ListRecords"),
         ("metadataPrefix", "oai_dc"),
     ]
@@ -334,7 +324,7 @@ def _build_initial_params(
 def _parse_page(
     xml_text: str,
     tokens: list[str],
-) -> tuple[list[DAOPaper], Optional[str]]:
+) -> tuple[list[DAOPaper], str | None]:
     """Parse one OAI-PMH response page; return (matches, resumption_token)."""
     root = ET.fromstring(xml_text)
     matches: list[DAOPaper] = []
@@ -358,18 +348,22 @@ def _parse_page(
 async def search_openedition_impl(
     query: str,
     max_results: int = 10,
-    collection: Optional[str] = None,
-    year_from: Optional[int] = None,
-    year_to: Optional[int] = None,
+    collection: str | None = None,
+    year_from: int | None = None,
+    year_to: int | None = None,
     *,
-    client: Optional[httpx.AsyncClient] = None,
+    client: httpx.AsyncClient | None = None,
 ) -> list[DAOPaper]:
     """Search OpenEdition via OAI-PMH. Injectable ``client`` for tests."""
     set_spec = _resolve_set_spec(collection)
     tokens = _query_tokens(query)
     log.info(
         "openedition.search query=%r tokens=%s set=%s years=%s-%s",
-        query, tokens, set_spec, year_from, year_to,
+        query,
+        tokens,
+        set_spec,
+        year_from,
+        year_to,
     )
 
     headers = {"User-Agent": _USER_AGENT, "Accept": "application/xml"}
@@ -381,9 +375,10 @@ async def search_openedition_impl(
         for page in range(_MAX_PAGES):
             if time.monotonic() > deadline:
                 log.warning(
-                    "openedition.search budget %ss exceeded after %d pages; "
-                    "returning %d partial matches",
-                    _BUDGET_SECONDS, page, len(matches),
+                    "openedition.search budget %ss exceeded after %d pages; returning %d partial matches",
+                    _BUDGET_SECONDS,
+                    page,
+                    len(matches),
                 )
                 break
             r = await c.get(OPENEDITION_OAI, params=params, headers=headers, timeout=HTTP_TIMEOUT)
@@ -392,7 +387,10 @@ async def search_openedition_impl(
             matches.extend(page_matches)
             log.info(
                 "openedition.search page=%d new=%d total=%d token=%s",
-                page, len(page_matches), len(matches), bool(token),
+                page,
+                len(page_matches),
+                len(matches),
+                bool(token),
             )
             if len(matches) >= max_results:
                 break
@@ -415,8 +413,8 @@ def register(mcp: FastMCP) -> None:
         query: str,
         max_results: int = 10,
         collection: str = "journals",
-        year_from: Optional[int] = None,
-        year_to: Optional[int] = None,
+        year_from: int | None = None,
+        year_to: int | None = None,
     ) -> list[DAOPaper]:
         """Search OpenEdition — France's main SSH (social sciences and
         humanities) open-access platform. Covers ~600 peer-reviewed journals

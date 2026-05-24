@@ -47,13 +47,13 @@ import logging
 import re
 import time
 import xml.etree.ElementTree as ET
-from typing import Optional
 
 import httpx
 from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
+from ..utils import HttpxParams
 from ..utils.contact import CONTACT_EMAIL
 from ..utils.doi import normalize_doi
 
@@ -67,11 +67,7 @@ IAA_OAI = "https://publications.iaa.org.il/do/oai/"
 # the v0.6.1 fix is the wall-clock budget below, not a tighter timeout.
 HTTP_TIMEOUT = 30.0
 
-_USER_AGENT = (
-    "dao-paper-search-mcp/0.6 "
-    "(+https://github.com/leiverkus/dao-paper-search-mcp; "
-    f"mailto:{CONTACT_EMAIL})"
-)
+_USER_AGENT = f"dao-paper-search-mcp/0.6 (+https://github.com/leiverkus/dao-paper-search-mcp; mailto:{CONTACT_EMAIL})"
 
 # Pagination safety cap. With each page costing 5-25 s on the live OAI
 # server, three pages caps the worst-case at ~75 s in absolute terms —
@@ -113,7 +109,7 @@ _NS = {
 }
 
 
-def _resolve_set_spec(collection: Optional[str]) -> Optional[str]:
+def _resolve_set_spec(collection: str | None) -> str | None:
     """Translate a user-facing collection name to an OAI setSpec.
 
     Default behaviour (``collection=None``) maps to Atiqot — the IAA's
@@ -153,16 +149,16 @@ def _detect_language(text: str) -> str:
     return "und"
 
 
-def _classify_identifiers(identifier_texts: list[str]) -> tuple[Optional[str], Optional[str], Optional[str]]:
+def _classify_identifiers(identifier_texts: list[str]) -> tuple[str | None, str | None, str | None]:
     """Sort a record's ``dc:identifier`` values into (doi, landing, pdf).
 
     BePress emits up to three identifier strings per record: a DC
     landing URL, a ``info:doi/...`` URI, and a viewable-content PDF
     URL. None are guaranteed.
     """
-    doi: Optional[str] = None
-    landing: Optional[str] = None
-    pdf: Optional[str] = None
+    doi: str | None = None
+    landing: str | None = None
+    pdf: str | None = None
     for text in identifier_texts:
         s = text.strip()
         if not s:
@@ -180,14 +176,14 @@ def _classify_identifiers(identifier_texts: list[str]) -> tuple[Optional[str], O
     return doi, landing, pdf
 
 
-def _pub_id_from_landing(landing_url: Optional[str]) -> Optional[str]:
+def _pub_id_from_landing(landing_url: str | None) -> str | None:
     """``https://publications.iaa.org.il/atiqot/vol112/iss1/1`` →
     ``atiqot/vol112/iss1/1``. Anything off-domain returns None."""
     if not landing_url:
         return None
     prefix = "https://publications.iaa.org.il/"
     if landing_url.startswith(prefix):
-        return landing_url[len(prefix):].rstrip("/") or None
+        return landing_url[len(prefix) :].rstrip("/") or None
     return None
 
 
@@ -206,7 +202,7 @@ _IAA_SERIES_TITLES = {
 _IAA_VOL_ISS_RE = re.compile(r"vol(?P<vol>[A-Za-z0-9]+)(?:/iss(?P<iss>[A-Za-z0-9]+))?")
 
 
-def _build_venue(landing_url: Optional[str]) -> Optional[Venue]:
+def _build_venue(landing_url: str | None) -> Venue | None:
     """Derive Venue from the IAA landing URL.
 
     Example: ``atiqot/vol112/iss1/1`` → name="‘Atiqot", volume="112",
@@ -220,8 +216,8 @@ def _build_venue(landing_url: Optional[str]) -> Optional[Venue]:
     parts = pub_id.split("/", 1)
     slug = parts[0]
     name = _IAA_SERIES_TITLES.get(slug)
-    volume: Optional[str] = None
-    issue: Optional[str] = None
+    volume: str | None = None
+    issue: str | None = None
     if len(parts) > 1:
         m = _IAA_VOL_ISS_RE.search(parts[1])
         if m:
@@ -232,7 +228,7 @@ def _build_venue(landing_url: Optional[str]) -> Optional[Venue]:
     return Venue(name=name, volume=volume, issue=issue)
 
 
-def _extract_year(date_text: Optional[str]) -> Optional[int]:
+def _extract_year(date_text: str | None) -> int | None:
     """``2024-11-26T10:12:05Z`` → 2024. Also tolerates bare YYYY."""
     if not date_text:
         return None
@@ -265,13 +261,11 @@ def _record_matches(
     """
     if not tokens:
         return True
-    haystack = " ".join(
-        [title, description, " ".join(subjects), " ".join(authors)]
-    ).lower()
+    haystack = " ".join([title, description, " ".join(subjects), " ".join(authors)]).lower()
     return all(tok in haystack for tok in tokens)
 
 
-def _record_to_paper(record: ET.Element, tokens: list[str]) -> Optional[DAOPaper]:
+def _record_to_paper(record: ET.Element, tokens: list[str]) -> DAOPaper | None:
     """Convert one ``<record>`` to a ``DAOPaper`` if it passes the keyword filter."""
     metadata = record.find("oai:metadata", _NS)
     if metadata is None:
@@ -286,22 +280,14 @@ def _record_to_paper(record: ET.Element, tokens: list[str]) -> Optional[DAOPaper
         title = "(untitled)"
 
     creators = [
-        (e.text or "").strip()
-        for e in dc.findall("dc:creator", _NS)
-        if e is not None and e.text and e.text.strip()
+        (e.text or "").strip() for e in dc.findall("dc:creator", _NS) if e is not None and e.text and e.text.strip()
     ]
 
     description_el = dc.find("dc:description", _NS)
-    description = (
-        (description_el.text or "").strip()
-        if description_el is not None and description_el.text
-        else ""
-    )
+    description = (description_el.text or "").strip() if description_el is not None and description_el.text else ""
 
     subjects = [
-        (e.text or "").strip()
-        for e in dc.findall("dc:subject", _NS)
-        if e is not None and e.text and e.text.strip()
+        (e.text or "").strip() for e in dc.findall("dc:subject", _NS) if e is not None and e.text and e.text.strip()
     ]
 
     # Keyword filter early — drop non-matching records before allocating.
@@ -311,11 +297,7 @@ def _record_to_paper(record: ET.Element, tokens: list[str]) -> Optional[DAOPaper
     date_el = dc.find("dc:date", _NS)
     year = _extract_year(date_el.text if date_el is not None else None)
 
-    identifier_texts = [
-        (e.text or "")
-        for e in dc.findall("dc:identifier", _NS)
-        if e is not None and e.text
-    ]
+    identifier_texts = [(e.text or "") for e in dc.findall("dc:identifier", _NS) if e is not None and e.text]
     doi, landing_url, pdf_url = _classify_identifiers(identifier_texts)
     iaa_pub_id = _pub_id_from_landing(landing_url)
 
@@ -372,12 +354,12 @@ def _record_to_paper(record: ET.Element, tokens: list[str]) -> Optional[DAOPaper
 
 
 def _build_initial_params(
-    set_spec: Optional[str],
-    year_from: Optional[int],
-    year_to: Optional[int],
-) -> list[tuple[str, str]]:
+    set_spec: str | None,
+    year_from: int | None,
+    year_to: int | None,
+) -> HttpxParams:
     """First-page OAI parameters. ``resumptionToken`` calls replace these."""
-    params: list[tuple[str, str]] = [
+    params: HttpxParams = [
         ("verb", "ListRecords"),
         ("metadataPrefix", "oai_dc"),
     ]
@@ -393,7 +375,7 @@ def _build_initial_params(
 def _parse_page(
     xml_text: str,
     tokens: list[str],
-) -> tuple[list[DAOPaper], Optional[str]]:
+) -> tuple[list[DAOPaper], str | None]:
     """Parse one OAI-PMH response page.
 
     Returns ``(matches_on_this_page, resumption_token)``. ``token`` is
@@ -422,11 +404,11 @@ def _parse_page(
 async def search_iaa_impl(
     query: str,
     max_results: int = 10,
-    collection: Optional[str] = None,
-    year_from: Optional[int] = None,
-    year_to: Optional[int] = None,
+    collection: str | None = None,
+    year_from: int | None = None,
+    year_to: int | None = None,
     *,
-    client: Optional[httpx.AsyncClient] = None,
+    client: httpx.AsyncClient | None = None,
 ) -> list[DAOPaper]:
     """Search IAA Publications via OAI-PMH.
 
@@ -438,28 +420,39 @@ async def search_iaa_impl(
     tokens = _query_tokens(query)
     log.info(
         "iaa.search query=%r tokens=%s set=%s years=%s-%s",
-        query, tokens, set_spec, year_from, year_to,
+        query,
+        tokens,
+        set_spec,
+        year_from,
+        year_to,
     )
 
     headers = {"User-Agent": _USER_AGENT, "Accept": "application/xml"}
 
     async def _run(c: httpx.AsyncClient) -> list[DAOPaper]:
         matches: list[DAOPaper] = []
-        params: list[tuple[str, str]] = _build_initial_params(set_spec, year_from, year_to)
+        params: HttpxParams = _build_initial_params(set_spec, year_from, year_to)
         deadline = time.monotonic() + _BUDGET_SECONDS
         for page in range(_MAX_PAGES):
             if time.monotonic() > deadline:
                 log.warning(
                     "iaa.search budget %ss exceeded after %d pages; returning %d partial matches",
-                    _BUDGET_SECONDS, page, len(matches),
+                    _BUDGET_SECONDS,
+                    page,
+                    len(matches),
                 )
                 break
             r = await c.get(IAA_OAI, params=params, headers=headers, timeout=HTTP_TIMEOUT)
             r.raise_for_status()
             page_matches, token = _parse_page(r.text, tokens)
             matches.extend(page_matches)
-            log.info("iaa.search page=%d new_matches=%d total=%d token=%s",
-                     page, len(page_matches), len(matches), bool(token))
+            log.info(
+                "iaa.search page=%d new_matches=%d total=%d token=%s",
+                page,
+                len(page_matches),
+                len(matches),
+                bool(token),
+            )
             if len(matches) >= max_results:
                 break
             if not token:
@@ -481,9 +474,9 @@ def register(mcp: FastMCP) -> None:
     async def search_iaa(
         query: str,
         max_results: int = 10,
-        collection: Optional[str] = None,
-        year_from: Optional[int] = None,
-        year_to: Optional[int] = None,
+        collection: str | None = None,
+        year_from: int | None = None,
+        year_to: int | None = None,
     ) -> list[DAOPaper]:
         """Search IAA Publications — Israel Antiquities Authority's open
         access portal: ʿAtiqot, Hadashot Arkheologiyot (HA-ESI), IAA

@@ -18,8 +18,7 @@ from dao_paper_search_mcp.adapters.core import (
     _work_to_paper,
     search_core_impl,
 )
-from dao_paper_search_mcp.models import DAOPaper, PublicationStatus
-
+from dao_paper_search_mcp.models import DAOPaper
 
 # Realistic CORE v3 work — DOI-bearing, primary institutional repo.
 DOI_WORK = {
@@ -92,13 +91,9 @@ def test_is_aggregator_detection() -> None:
 
 
 def test_open_access_url_prefers_download_then_fulltext() -> None:
-    assert _open_access_url(DOI_WORK) == (
-        "https://haifa.example.org/eprint/12345/1/Crossroads.pdf"
-    )
+    assert _open_access_url(DOI_WORK) == ("https://haifa.example.org/eprint/12345/1/Crossroads.pdf")
     # Falls back to sourceFulltextUrls when downloadUrl is absent.
-    assert _open_access_url(THESIS_WORK) == (
-        "https://primage.tau.ac.il/libraries/theses/12345.pdf"
-    )
+    assert _open_access_url(THESIS_WORK) == ("https://primage.tau.ac.il/libraries/theses/12345.pdf")
     assert _open_access_url({}) is None
 
 
@@ -170,9 +165,7 @@ def test_work_to_paper_thesis_no_doi_uses_core_landing() -> None:
     assert p.verification_note == "document_type=thesis"
     # Author-Year form against CORE landing.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown == (
-        "[(Researcher 2018)](https://core.ac.uk/works/5555444)"
-    )
+    assert p.inline_citation.markdown == ("[(Researcher 2018)](https://core.ac.uk/works/5555444)")
 
 
 def test_work_without_doi_or_core_id_is_dropped() -> None:
@@ -213,9 +206,7 @@ async def test_search_core_impl_happy_path(monkeypatch) -> None:
 @respx.mock
 async def test_search_core_impl_sends_bearer_token(monkeypatch) -> None:
     monkeypatch.setenv("CORE_API_KEY", "test-bearer-xyz")
-    route = respx.post(CORE_API).mock(
-        return_value=httpx.Response(200, json={"totalHits": 0, "results": []})
-    )
+    route = respx.post(CORE_API).mock(return_value=httpx.Response(200, json={"totalHits": 0, "results": []}))
     await search_core_impl("anything")
     assert route.calls.last.request.headers.get("Authorization") == "Bearer test-bearer-xyz"
 
@@ -224,9 +215,7 @@ async def test_search_core_impl_sends_bearer_token(monkeypatch) -> None:
 @respx.mock
 async def test_search_core_impl_empty(monkeypatch) -> None:
     monkeypatch.setenv("CORE_API_KEY", "test-key")
-    respx.post(CORE_API).mock(
-        return_value=httpx.Response(200, json={"totalHits": 0, "results": []})
-    )
+    respx.post(CORE_API).mock(return_value=httpx.Response(200, json={"totalHits": 0, "results": []}))
     assert await search_core_impl("xyzzy") == []
 
 

@@ -41,13 +41,13 @@ import logging
 import re
 import time
 import xml.etree.ElementTree as ET
-from typing import Optional
 
 import httpx
 from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
+from ..utils import HttpxParams
 from ..utils.contact import CONTACT_EMAIL
 from ..utils.doi import normalize_doi
 
@@ -56,11 +56,7 @@ log = logging.getLogger(__name__)
 PROPYLAEUM_OAI = "https://archiv.ub.uni-heidelberg.de/propylaeumdok/cgi/oai2"
 HTTP_TIMEOUT = 30.0
 
-_USER_AGENT = (
-    "dao-paper-search-mcp/0.1 "
-    "(+https://github.com/leiverkus/dao-paper-search-mcp; "
-    f"mailto:{CONTACT_EMAIL})"
-)
+_USER_AGENT = f"dao-paper-search-mcp/0.1 (+https://github.com/leiverkus/dao-paper-search-mcp; mailto:{CONTACT_EMAIL})"
 
 _MAX_PAGES = 3
 _BUDGET_SECONDS = 40.0
@@ -73,33 +69,33 @@ _NS = {
 
 # ISO 639-2/T → ISO 639-1 mapping for the languages most common in Propylaeum.
 _ISO3_TO_2: dict[str, str] = {
-    "deu": "de", "ger": "de",
+    "deu": "de",
+    "ger": "de",
     "eng": "en",
-    "fra": "fr", "fre": "fr",
+    "fra": "fr",
+    "fre": "fr",
     "ita": "it",
     "lat": "la",
     "spa": "es",
     "por": "pt",
-    "nld": "nl", "dut": "nl",
+    "nld": "nl",
+    "dut": "nl",
     "pol": "pl",
     "hun": "hu",
-    "ces": "cs", "cze": "cs",
+    "ces": "cs",
+    "cze": "cs",
     "grc": "el",  # Ancient Greek
     "heb": "he",
     "ara": "ar",
     "tur": "tr",
 }
 
-_EPRINTS_ID_RE = re.compile(
-    r"https?://archiv\.ub\.uni-heidelberg\.de/propylaeumdok/(\d+)"
-)
+_EPRINTS_ID_RE = re.compile(r"https?://archiv\.ub\.uni-heidelberg\.de/propylaeumdok/(\d+)")
 
-_DOI_URL_RE = re.compile(
-    r"https?://(?:dx\.)?doi\.org/(.+)", re.IGNORECASE
-)
+_DOI_URL_RE = re.compile(r"https?://(?:dx\.)?doi\.org/(.+)", re.IGNORECASE)
 
 
-def _extract_eprints_id(landing_url: Optional[str]) -> Optional[str]:
+def _extract_eprints_id(landing_url: str | None) -> str | None:
     """``https://archiv.ub.uni-heidelberg.de/propylaeumdok/10234/`` → ``"10234"``."""
     if not landing_url:
         return None
@@ -109,7 +105,7 @@ def _extract_eprints_id(landing_url: Optional[str]) -> Optional[str]:
 
 def _classify_identifiers(
     identifier_texts: list[str],
-) -> tuple[Optional[str], Optional[str], Optional[str]]:
+) -> tuple[str | None, str | None, str | None]:
     """Sort ``dc:identifier`` values into (doi, landing_url, pdf_url).
 
     EPrints outputs:
@@ -117,9 +113,9 @@ def _classify_identifiers(
     - A DOI URL: ``https://doi.org/10.…`` (when registered)
     - Possibly a PDF URL: ``https://archiv.…/propylaeumdok/{ID}/1/filename.pdf``
     """
-    doi: Optional[str] = None
-    landing: Optional[str] = None
-    pdf: Optional[str] = None
+    doi: str | None = None
+    landing: str | None = None
+    pdf: str | None = None
 
     for text in identifier_texts:
         s = text.strip()
@@ -147,7 +143,7 @@ def _classify_identifiers(
     return doi, landing, pdf
 
 
-def _parse_language(dc_language: Optional[str]) -> str:
+def _parse_language(dc_language: str | None) -> str:
     """Map ISO 639-2/T or 639-1 code to a 2-letter tag; fall back to ``"und"``."""
     if not dc_language:
         return "und"
@@ -174,7 +170,7 @@ def _detect_language_from_text(text: str) -> str:
     return "und"
 
 
-def _extract_year(date_text: Optional[str]) -> Optional[int]:
+def _extract_year(date_text: str | None) -> int | None:
     """``2024-11-26`` or ``2024`` → 2024; ``None`` on failure."""
     if not date_text:
         return None
@@ -200,13 +196,11 @@ def _record_matches(
 ) -> bool:
     if not tokens:
         return True
-    haystack = " ".join(
-        [title, description, " ".join(subjects), " ".join(authors)]
-    ).lower()
+    haystack = " ".join([title, description, " ".join(subjects), " ".join(authors)]).lower()
     return all(tok in haystack for tok in tokens)
 
 
-def _build_venue_from_source(source_texts: list[str]) -> Optional[Venue]:
+def _build_venue_from_source(source_texts: list[str]) -> Venue | None:
     """Parse venue information from ``dc:source`` fields.
 
     OJS/EPrints encodes journal metadata in source strings like:
@@ -223,8 +217,8 @@ def _build_venue_from_source(source_texts: list[str]) -> Optional[Venue]:
         if len(parts) < 2:
             continue
         name = parts[0] if parts[0] else None
-        volume: Optional[str] = None
-        pages: Optional[str] = None
+        volume: str | None = None
+        pages: str | None = None
         for part in parts[1:]:
             # Volume pattern: "Bd. 21", "Vol. 3", "21 (2024)", bare digits
             vol_m = re.search(r"(?:Bd\.|Vol\.?|Band|Volume)?\s*(\d+)", part, re.IGNORECASE)
@@ -239,7 +233,7 @@ def _build_venue_from_source(source_texts: list[str]) -> Optional[Venue]:
     return None
 
 
-def _record_to_paper(record: ET.Element, tokens: list[str]) -> Optional[DAOPaper]:
+def _record_to_paper(record: ET.Element, tokens: list[str]) -> DAOPaper | None:
     """Convert one EPrints ``<record>`` to a ``DAOPaper`` if keyword-filtered."""
     metadata = record.find("oai:metadata", _NS)
     if metadata is None:
@@ -254,22 +248,14 @@ def _record_to_paper(record: ET.Element, tokens: list[str]) -> Optional[DAOPaper
         title = "(untitled)"
 
     creators = [
-        (e.text or "").strip()
-        for e in dc.findall("dc:creator", _NS)
-        if e is not None and e.text and e.text.strip()
+        (e.text or "").strip() for e in dc.findall("dc:creator", _NS) if e is not None and e.text and e.text.strip()
     ]
 
     description_el = dc.find("dc:description", _NS)
-    description = (
-        (description_el.text or "").strip()
-        if description_el is not None and description_el.text
-        else ""
-    )
+    description = (description_el.text or "").strip() if description_el is not None and description_el.text else ""
 
     subjects = [
-        (e.text or "").strip()
-        for e in dc.findall("dc:subject", _NS)
-        if e is not None and e.text and e.text.strip()
+        (e.text or "").strip() for e in dc.findall("dc:subject", _NS) if e is not None and e.text and e.text.strip()
     ]
 
     if not _record_matches(tokens, title, description, subjects, creators):
@@ -278,11 +264,7 @@ def _record_to_paper(record: ET.Element, tokens: list[str]) -> Optional[DAOPaper
     date_el = dc.find("dc:date", _NS)
     year = _extract_year(date_el.text if date_el is not None else None)
 
-    identifier_texts = [
-        (e.text or "")
-        for e in dc.findall("dc:identifier", _NS)
-        if e is not None and e.text
-    ]
+    identifier_texts = [(e.text or "") for e in dc.findall("dc:identifier", _NS) if e is not None and e.text]
     doi, landing_url, pdf_url = _classify_identifiers(identifier_texts)
 
     # PDF may also appear in dc:relation
@@ -315,9 +297,7 @@ def _record_to_paper(record: ET.Element, tokens: list[str]) -> Optional[DAOPaper
         language = _detect_language_from_text(f"{title} {description}")
 
     source_texts = [
-        (e.text or "").strip()
-        for e in dc.findall("dc:source", _NS)
-        if e is not None and e.text and e.text.strip()
+        (e.text or "").strip() for e in dc.findall("dc:source", _NS) if e is not None and e.text and e.text.strip()
     ]
     venue = _build_venue_from_source(source_texts)
 
@@ -353,10 +333,10 @@ def _record_to_paper(record: ET.Element, tokens: list[str]) -> Optional[DAOPaper
 
 
 def _build_initial_params(
-    year_from: Optional[int],
-    year_to: Optional[int],
-) -> list[tuple[str, str]]:
-    params: list[tuple[str, str]] = [
+    year_from: int | None,
+    year_to: int | None,
+) -> HttpxParams:
+    params: HttpxParams = [
         ("verb", "ListRecords"),
         ("metadataPrefix", "oai_dc"),
     ]
@@ -370,7 +350,7 @@ def _build_initial_params(
 def _parse_page(
     xml_text: str,
     tokens: list[str],
-) -> tuple[list[DAOPaper], Optional[str]]:
+) -> tuple[list[DAOPaper], str | None]:
     """Parse one OAI-PMH response page; return (matches, resumption_token)."""
     root = ET.fromstring(xml_text)
     matches: list[DAOPaper] = []
@@ -394,16 +374,19 @@ def _parse_page(
 async def search_propylaeum_impl(
     query: str,
     max_results: int = 10,
-    year_from: Optional[int] = None,
-    year_to: Optional[int] = None,
+    year_from: int | None = None,
+    year_to: int | None = None,
     *,
-    client: Optional[httpx.AsyncClient] = None,
+    client: httpx.AsyncClient | None = None,
 ) -> list[DAOPaper]:
     """Search PropylaeumDOK via OAI-PMH. Injectable ``client`` for tests."""
     tokens = _query_tokens(query)
     log.info(
         "propylaeum.search query=%r tokens=%s years=%s-%s",
-        query, tokens, year_from, year_to,
+        query,
+        tokens,
+        year_from,
+        year_to,
     )
 
     headers = {"User-Agent": _USER_AGENT, "Accept": "application/xml"}
@@ -415,9 +398,10 @@ async def search_propylaeum_impl(
         for page in range(_MAX_PAGES):
             if time.monotonic() > deadline:
                 log.warning(
-                    "propylaeum.search budget %ss exceeded after %d pages; "
-                    "returning %d partial matches",
-                    _BUDGET_SECONDS, page, len(matches),
+                    "propylaeum.search budget %ss exceeded after %d pages; returning %d partial matches",
+                    _BUDGET_SECONDS,
+                    page,
+                    len(matches),
                 )
                 break
             r = await c.get(PROPYLAEUM_OAI, params=params, headers=headers, timeout=HTTP_TIMEOUT)
@@ -426,7 +410,10 @@ async def search_propylaeum_impl(
             matches.extend(page_matches)
             log.info(
                 "propylaeum.search page=%d new=%d total=%d token=%s",
-                page, len(page_matches), len(matches), bool(token),
+                page,
+                len(page_matches),
+                len(matches),
+                bool(token),
             )
             if len(matches) >= max_results:
                 break
@@ -448,8 +435,8 @@ def register(mcp: FastMCP) -> None:
     async def search_propylaeum(
         query: str,
         max_results: int = 10,
-        year_from: Optional[int] = None,
-        year_to: Optional[int] = None,
+        year_from: int | None = None,
+        year_to: int | None = None,
     ) -> list[DAOPaper]:
         """Search PropylaeumDOK — the Open Access repository of the FID
         Altertumswissenschaften (UB Heidelberg). Covers classical archaeology,

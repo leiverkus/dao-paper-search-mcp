@@ -63,7 +63,6 @@ from __future__ import annotations
 import logging
 import re
 import xml.etree.ElementTree as ET
-from typing import Optional
 
 import httpx
 from mcp.server.fastmcp import FastMCP
@@ -78,11 +77,7 @@ log = logging.getLogger(__name__)
 K10PLUS_SRU = "https://sru.k10plus.de/opac-de-627"
 HTTP_TIMEOUT = 30.0
 
-_USER_AGENT = (
-    "dao-paper-search-mcp/0.1 "
-    "(+https://github.com/leiverkus/dao-paper-search-mcp; "
-    f"mailto:{CONTACT_EMAIL})"
-)
+_USER_AGENT = f"dao-paper-search-mcp/0.1 (+https://github.com/leiverkus/dao-paper-search-mcp; mailto:{CONTACT_EMAIL})"
 
 _PAGE_SIZE = 20
 _MAX_PAGES = 3
@@ -91,17 +86,21 @@ _SRU_NS = {"zs": "http://www.loc.gov/zing/srw/"}
 _PICA_NS = {"pica": "info:srw/schema/5/picaXML-v1.0"}
 
 _ISO3_TO_2: dict[str, str] = {
-    "deu": "de", "ger": "de",
+    "deu": "de",
+    "ger": "de",
     "eng": "en",
-    "fra": "fr", "fre": "fr",
+    "fra": "fr",
+    "fre": "fr",
     "ita": "it",
     "lat": "la",
     "spa": "es",
     "por": "pt",
-    "nld": "nl", "dut": "nl",
+    "nld": "nl",
+    "dut": "nl",
     "pol": "pl",
     "hun": "hu",
-    "ces": "cs", "cze": "cs",
+    "ces": "cs",
+    "cze": "cs",
     "grc": "el",
     "heb": "he",
     "ara": "ar",
@@ -111,7 +110,7 @@ _ISO3_TO_2: dict[str, str] = {
 _SORT_MARKER_RE = re.compile(r"@")
 
 
-def _pica_subfield(record: ET.Element, tag: str, code: str) -> Optional[str]:
+def _pica_subfield(record: ET.Element, tag: str, code: str) -> str | None:
     for df in record.findall(f"pica:datafield[@tag='{tag}']", _PICA_NS):
         for sf in df.findall(f"pica:subfield[@code='{code}']", _PICA_NS):
             text = (sf.text or "").strip()
@@ -130,7 +129,7 @@ def _pica_all_subfields(record: ET.Element, tag: str, code: str) -> list[str]:
     return results
 
 
-def _pica_author_from_datafield(df: ET.Element) -> Optional[str]:
+def _pica_author_from_datafield(df: ET.Element) -> str | None:
     """Extract "Family, Given" from a 028A / 028C datafield.
 
     K10plus uses uppercase subfield codes (``A`` / ``D``) for GND-linked
@@ -183,7 +182,7 @@ def _extract_title(record: ET.Element) -> str:
     return f"{main}: {sub}" if sub else main
 
 
-def _extract_year(record: ET.Element) -> Optional[int]:
+def _extract_year(record: ET.Element) -> int | None:
     raw = _pica_subfield(record, "011@", "a")
     if not raw:
         return None
@@ -204,7 +203,7 @@ def _extract_language(record: ET.Element) -> str:
     return _ISO3_TO_2.get(code, code if len(code) == 2 else "und")
 
 
-def _extract_doi(record: ET.Element) -> Optional[str]:
+def _extract_doi(record: ET.Element) -> str | None:
     bare = _pica_subfield(record, "004V", "0")
     if bare:
         d = normalize_doi(bare)
@@ -218,7 +217,7 @@ def _extract_doi(record: ET.Element) -> Optional[str]:
     return None
 
 
-def _extract_venue(record: ET.Element) -> Optional[Venue]:
+def _extract_venue(record: ET.Element) -> Venue | None:
     """Build Venue from journal (039B) or series/publisher (036E / 033A)."""
     # Journal article: 039B/t + 031A (vol/issue/pages)
     journal = _pica_subfield(record, "039B", "t")
@@ -238,7 +237,7 @@ def _extract_venue(record: ET.Element) -> Optional[Venue]:
     return None
 
 
-def _record_to_paper(record: ET.Element, tokens: list[str]) -> Optional[DAOPaper]:
+def _record_to_paper(record: ET.Element, tokens: list[str]) -> DAOPaper | None:
     title = _extract_title(record)
     authors = _extract_authors(record)
     subjects = _pica_all_subfields(record, "044K", "a")
@@ -246,9 +245,7 @@ def _record_to_paper(record: ET.Element, tokens: list[str]) -> Optional[DAOPaper
     abstract = abstract_parts[0] if abstract_parts else None
 
     if tokens:
-        haystack = " ".join(
-            [title, abstract or "", " ".join(subjects), " ".join(authors)]
-        ).lower()
+        haystack = " ".join([title, abstract or "", " ".join(subjects), " ".join(authors)]).lower()
         if not all(tok in haystack for tok in tokens):
             return None
 
@@ -265,7 +262,7 @@ def _record_to_paper(record: ET.Element, tokens: list[str]) -> Optional[DAOPaper
     else:
         return None
 
-    landing_url: Optional[str] = f"https://doi.org/{doi}" if doi else None
+    landing_url: str | None = f"https://doi.org/{doi}" if doi else None
 
     identifiers = Identifiers(doi=doi)
     audit = Audit(primary_source=True, aggregator=False, warn_marker=False)
@@ -301,7 +298,7 @@ def _record_to_paper(record: ET.Element, tokens: list[str]) -> Optional[DAOPaper
 def _parse_page(
     xml_text: str,
     tokens: list[str],
-) -> tuple[list[DAOPaper], Optional[int]]:
+) -> tuple[list[DAOPaper], int | None]:
     root = ET.fromstring(xml_text)
     matches: list[DAOPaper] = []
 
@@ -321,12 +318,8 @@ def _parse_page(
             matches.append(paper)
 
     next_pos_el = root.find("zs:nextRecordPosition", _SRU_NS)
-    next_pos: Optional[int] = None
-    if (
-        next_pos_el is not None
-        and next_pos_el.text
-        and next_pos_el.text.strip().isdigit()
-    ):
+    next_pos: int | None = None
+    if next_pos_el is not None and next_pos_el.text and next_pos_el.text.strip().isdigit():
         next_pos = int(next_pos_el.text.strip())
 
     return matches, next_pos
@@ -335,10 +328,10 @@ def _parse_page(
 async def search_gnomon_impl(
     query: str,
     max_results: int = 10,
-    year_from: Optional[int] = None,
-    year_to: Optional[int] = None,
+    year_from: int | None = None,
+    year_to: int | None = None,
     *,
-    client: Optional[httpx.AsyncClient] = None,
+    client: httpx.AsyncClient | None = None,
 ) -> list[DAOPaper]:
     """Search Gnomon / K10plus via SRU (picaxml). Injectable ``client`` for tests."""
     tokens = [t for t in re.split(r"\s+", query.strip().lower()) if t]
@@ -346,11 +339,11 @@ async def search_gnomon_impl(
     # K10plus CQL: pica.all searches all indexed fields; pica.jah for year range.
     cql = f'pica.all="{query}"'
     if year_from is not None and year_to is not None:
-        cql += f' and pica.jah>={year_from} and pica.jah<={year_to}'
+        cql += f" and pica.jah>={year_from} and pica.jah<={year_to}"
     elif year_from is not None:
-        cql += f' and pica.jah>={year_from}'
+        cql += f" and pica.jah>={year_from}"
     elif year_to is not None:
-        cql += f' and pica.jah<={year_to}'
+        cql += f" and pica.jah<={year_to}"
 
     log.info("gnomon.search query=%r cql=%r max_results=%d", query, cql, max_results)
 
@@ -374,7 +367,11 @@ async def search_gnomon_impl(
             matches.extend(page_matches)
             log.info(
                 "gnomon.search page=%d start=%d new=%d total=%d next=%s",
-                page, start_record, len(page_matches), len(matches), next_pos,
+                page,
+                start_record,
+                len(page_matches),
+                len(matches),
+                next_pos,
             )
             if len(matches) >= max_results:
                 break
@@ -396,8 +393,8 @@ def register(mcp: FastMCP) -> None:
     async def search_gnomon(
         query: str,
         max_results: int = 10,
-        year_from: Optional[int] = None,
-        year_to: Optional[int] = None,
+        year_from: int | None = None,
+        year_to: int | None = None,
     ) -> list[DAOPaper]:
         """Search the Gnomon Bibliographische Datenbank — the leading
         international bibliography for classical studies (ancient Greece and

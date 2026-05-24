@@ -15,12 +15,10 @@ identische DOIs in unterschiedlicher Schreibweise → identischer Key.
 
 from __future__ import annotations
 
-from typing import Optional
-
 from .models import DAOPaper
 
 
-def dedupe_key(paper: DAOPaper) -> Optional[str]:
+def dedupe_key(paper: DAOPaper) -> str | None:
     """Stabiler Dedupe-Schlüssel auf Basis der normalisierten DOI.
 
     Gibt ``None`` zurück, wenn der Datensatz keine DOI führt — in diesem

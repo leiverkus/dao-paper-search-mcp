@@ -14,8 +14,6 @@ Any input that does not resolve to that form is treated as missing
 
 from __future__ import annotations
 
-from typing import Optional
-
 _PREFIXES: tuple[str, ...] = (
     "https://doi.org/",
     "http://doi.org/",
@@ -28,7 +26,7 @@ _PREFIXES: tuple[str, ...] = (
 )
 
 
-def normalize_doi(value: Optional[str]) -> Optional[str]:
+def normalize_doi(value: str | None) -> str | None:
     """Return the bare, lower-cased DOI, or ``None`` if absent/invalid.
 
     DOIs are case-insensitive per the DOI Handbook; lower-casing makes
@@ -43,7 +41,7 @@ def normalize_doi(value: Optional[str]) -> Optional[str]:
     lowered = s.lower()
     for prefix in _PREFIXES:
         if lowered.startswith(prefix):
-            s = s[len(prefix):]
+            s = s[len(prefix) :]
             lowered = s.lower()
             break
     if not lowered.startswith("10."):

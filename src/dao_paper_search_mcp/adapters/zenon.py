@@ -27,17 +27,18 @@ We do NOT call paper-search internally — see architecture principle #2.
 from __future__ import annotations
 
 import logging
-from typing import Any, Mapping, Optional, Sequence
+import re
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 import httpx
 from mcp.server.fastmcp import FastMCP
 
-import re
-
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
-from ..utils.doi import normalize_doi
 from ..resolvers.gazetteer import site_id_tokens_from_zenon_record
+from ..utils import HttpxParams
+from ..utils.doi import normalize_doi
 
 log = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ _LANG_FACET: dict[str, str] = {
 _LANG_ISO: dict[str, str] = {v.lower(): k for k, v in _LANG_FACET.items()}
 
 
-def _first_int(values: Sequence[Any]) -> Optional[int]:
+def _first_int(values: Sequence[Any]) -> int | None:
     """Pick the first parseable year out of a list like ['1994', '1995?']."""
     for v in values:
         s = str(v).strip()
@@ -105,7 +106,7 @@ def _flatten_authors(record: Mapping[str, Any]) -> list[str]:
     return out
 
 
-def _series_or_journal(record: Mapping[str, Any]) -> Optional[str]:
+def _series_or_journal(record: Mapping[str, Any]) -> str | None:
     """Render the series / volume label, falling back to nothing.
 
     Zenon journal articles often arrive with ``series=[{name, number}]``
@@ -124,14 +125,14 @@ def _series_or_journal(record: Mapping[str, Any]) -> Optional[str]:
     return name or number or None
 
 
-def _build_landing_url(record: Mapping[str, Any]) -> Optional[str]:
+def _build_landing_url(record: Mapping[str, Any]) -> str | None:
     rid = record.get("id")
     if not rid:
         return None
     return ZENON_RECORD_URL.format(record_id=rid)
 
 
-def _build_open_access_url(record: Mapping[str, Any]) -> Optional[str]:
+def _build_open_access_url(record: Mapping[str, Any]) -> str | None:
     """Pick the first record-supplied URL that looks externally resolvable."""
     for url in record.get("urls") or []:
         if isinstance(url, dict):
@@ -146,7 +147,7 @@ def _build_open_access_url(record: Mapping[str, Any]) -> Optional[str]:
 _DOI_RE = re.compile(r"10\.\d{4,9}/[^\s\"<>]+")
 
 
-def _extract_doi(record: Mapping[str, Any]) -> Optional[str]:
+def _extract_doi(record: Mapping[str, Any]) -> str | None:
     """Scan a Zenon record for an external DOI.
 
     Zenon's VuFind API surfaces DOIs in two places: occasionally as a
@@ -191,7 +192,7 @@ def _record_to_paper(record: Mapping[str, Any]) -> DAOPaper:
     # volume — surface it as Venue.name + Venue.volume. Issue and pages
     # aren't structurally exposed in the VuFind API response.
     series = record.get("series") or []
-    venue: Optional[Venue] = None
+    venue: Venue | None = None
     if series:
         s0 = series[0]
         v_name = (s0.get("name") or "").strip().rstrip(",;:") or None
@@ -231,13 +232,13 @@ def _record_to_paper(record: Mapping[str, Any]) -> DAOPaper:
 def _build_params(
     query: str,
     max_results: int,
-    language: Optional[str],
-    year_from: Optional[int],
-    year_to: Optional[int],
-) -> list[tuple[str, str]]:
+    language: str | None,
+    year_from: int | None,
+    year_to: int | None,
+) -> HttpxParams:
     """Build an httpx params list. Tuples instead of dict because Zenon
     expects repeated ``filter[]=...`` keys."""
-    params: list[tuple[str, str]] = [
+    params: HttpxParams = [
         ("lookfor", query),
         ("limit", str(max(1, min(max_results, 50)))),
     ]
@@ -255,11 +256,11 @@ def _build_params(
 async def search_zenon_impl(
     query: str,
     max_results: int = 10,
-    language: Optional[str] = None,
-    year_from: Optional[int] = None,
-    year_to: Optional[int] = None,
+    language: str | None = None,
+    year_from: int | None = None,
+    year_to: int | None = None,
     *,
-    client: Optional[httpx.AsyncClient] = None,
+    client: httpx.AsyncClient | None = None,
 ) -> list[DAOPaper]:
     """Search Zenon DAI via the REST API.
 
@@ -291,9 +292,9 @@ def register(mcp: FastMCP) -> None:
     async def search_zenon(
         query: str,
         max_results: int = 10,
-        language: Optional[str] = None,
-        year_from: Optional[int] = None,
-        year_to: Optional[int] = None,
+        language: str | None = None,
+        year_from: int | None = None,
+        year_to: int | None = None,
     ) -> list[DAOPaper]:
         """Search the Zenon DAI catalog — the German Archaeological Institute's
         bibliography (~1M records, multilingual). Best for German-language Levant

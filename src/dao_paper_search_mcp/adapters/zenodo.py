@@ -22,13 +22,15 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 import httpx
 from mcp.server.fastmcp import FastMCP
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
+from ..utils import HttpxParams
 from ..utils.contact import CONTACT_EMAIL
 from ..utils.doi import normalize_doi
 
@@ -37,11 +39,7 @@ log = logging.getLogger(__name__)
 ZENODO_API = "https://zenodo.org/api/records"
 HTTP_TIMEOUT = 30.0
 
-_USER_AGENT = (
-    "dao-paper-search-mcp/0.1 "
-    "(+https://github.com/leiverkus/dao-paper-search-mcp; "
-    f"mailto:{CONTACT_EMAIL})"
-)
+_USER_AGENT = f"dao-paper-search-mcp/0.1 (+https://github.com/leiverkus/dao-paper-search-mcp; mailto:{CONTACT_EMAIL})"
 
 # Resource-type values that map cleanly to "journal article" semantics.
 # Everything else gets a verification_note so the agent can weigh it.
@@ -67,7 +65,7 @@ _HTML_TAG_RE = re.compile(r"<[^>]+>")
 _HTML_WS_RE = re.compile(r"\s+")
 
 
-def _strip_html(text: Optional[str]) -> Optional[str]:
+def _strip_html(text: str | None) -> str | None:
     if not text:
         return None
     stripped = _HTML_TAG_RE.sub("", text)
@@ -91,7 +89,7 @@ def _format_authors(metadata: Mapping[str, Any]) -> list[str]:
     return out
 
 
-def _extract_year(metadata: Mapping[str, Any]) -> Optional[int]:
+def _extract_year(metadata: Mapping[str, Any]) -> int | None:
     """Zenodo's ``publication_date`` is ``YYYY-MM-DD`` or ``YYYY``."""
     date = (metadata.get("publication_date") or "").strip()
     if len(date) >= 4 and date[:4].isdigit():
@@ -99,7 +97,7 @@ def _extract_year(metadata: Mapping[str, Any]) -> Optional[int]:
     return None
 
 
-def _resource_type_key(metadata: Mapping[str, Any]) -> Optional[str]:
+def _resource_type_key(metadata: Mapping[str, Any]) -> str | None:
     """Compose Zenodo's resource_type into a canonical key string.
 
     Zenodo serialises ``resource_type`` as ``{"type": "publication",
@@ -116,7 +114,7 @@ def _resource_type_key(metadata: Mapping[str, Any]) -> Optional[str]:
     return top or None
 
 
-def _open_access_url(record: Mapping[str, Any]) -> Optional[str]:
+def _open_access_url(record: Mapping[str, Any]) -> str | None:
     """Pick the first file's download URL when access is open."""
     files = record.get("files") or []
     if not isinstance(files, list):
@@ -131,20 +129,20 @@ def _open_access_url(record: Mapping[str, Any]) -> Optional[str]:
     return None
 
 
-def _publication_status(rt_key: Optional[str]) -> PublicationStatus:
+def _publication_status(rt_key: str | None) -> PublicationStatus:
     if rt_key in _PREPRINT_TYPES:
         return PublicationStatus.PREPRINT
     return PublicationStatus.PUBLISHED
 
 
-def _verification_note(rt_key: Optional[str]) -> Optional[str]:
+def _verification_note(rt_key: str | None) -> str | None:
     """Flag non-article resource types so the agent can rank them."""
     if rt_key and rt_key not in _ARTICLE_TYPES:
         return f"resource_type={rt_key}"
     return None
 
 
-def _record_to_paper(record: Mapping[str, Any]) -> Optional[DAOPaper]:
+def _record_to_paper(record: Mapping[str, Any]) -> DAOPaper | None:
     metadata = record.get("metadata") or {}
     if not isinstance(metadata, dict):
         return None
@@ -178,7 +176,7 @@ def _record_to_paper(record: Mapping[str, Any]) -> Optional[DAOPaper]:
     )
     # Zenodo exposes journal metadata under ``metadata.journal``.
     journal_meta = metadata.get("journal") or {}
-    venue: Optional[Venue] = None
+    venue: Venue | None = None
     if isinstance(journal_meta, dict):
         v_name = (journal_meta.get("title") or "").strip() or None
         v_volume = (journal_meta.get("volume") or "").strip() or None
@@ -219,9 +217,9 @@ def _record_to_paper(record: Mapping[str, Any]) -> Optional[DAOPaper]:
 def _build_params(
     query: str,
     max_results: int,
-    year_from: Optional[int],
-    year_to: Optional[int],
-) -> list[tuple[str, str]]:
+    year_from: int | None,
+    year_to: int | None,
+) -> HttpxParams:
     """Build a Zenodo ``/records`` parameter list.
 
     Year filtering uses Elasticsearch range syntax in the ``q``
@@ -243,10 +241,10 @@ def _build_params(
 async def search_zenodo_impl(
     query: str,
     max_results: int = 10,
-    year_from: Optional[int] = None,
-    year_to: Optional[int] = None,
+    year_from: int | None = None,
+    year_to: int | None = None,
     *,
-    client: Optional[httpx.AsyncClient] = None,
+    client: httpx.AsyncClient | None = None,
 ) -> list[DAOPaper]:
     """Search Zenodo. ``client`` is injectable for tests."""
     params = _build_params(query, max_results, year_from, year_to)
@@ -259,8 +257,7 @@ async def search_zenodo_impl(
         data = r.json()
         # Zenodo wraps results in {"hits": {"total": N, "hits": [...]}}.
         hits = ((data.get("hits") or {}).get("hits")) or []
-        log.info("zenodo.search hits=%d total=%s", len(hits),
-                 (data.get("hits") or {}).get("total"))
+        log.info("zenodo.search hits=%d total=%s", len(hits), (data.get("hits") or {}).get("total"))
         papers = [_record_to_paper(rec) for rec in hits]
         return [p for p in papers if p is not None]
 
@@ -277,8 +274,8 @@ def register(mcp: FastMCP) -> None:
     async def search_zenodo(
         query: str,
         max_results: int = 10,
-        year_from: Optional[int] = None,
-        year_to: Optional[int] = None,
+        year_from: int | None = None,
+        year_to: int | None = None,
     ) -> list[DAOPaper]:
         """Search Zenodo — the CERN-operated open research repository.
         Strongest for: research data, software releases, preprints,

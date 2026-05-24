@@ -29,8 +29,8 @@ arXiv, IAA, and ADAJ are intentionally excluded:
 from __future__ import annotations
 
 import json
+from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import Callable, Mapping, Optional
 
 import pytest
 
@@ -109,7 +109,7 @@ ZENON_RECORD: Mapping = {
 }
 
 
-def _doi_or_none(paper: Optional[DAOPaper]) -> Optional[str]:
+def _doi_or_none(paper: DAOPaper | None) -> str | None:
     assert paper is not None, "adapter dropped a record that should have mapped"
     assert paper.identifiers is not None, "Identifiers must be attached"
     return paper.identifiers.doi
@@ -134,14 +134,13 @@ def _doi_or_none(paper: Optional[DAOPaper]) -> Optional[str]:
 )
 def test_adapter_extracts_normalised_doi(
     label: str,
-    mapper: Callable[[Mapping], Optional[DAOPaper]],
+    mapper: Callable[[Mapping], DAOPaper | None],
     record: Mapping,
     expected_doi: str,
 ) -> None:
     paper = mapper(record)
     assert _doi_or_none(paper) == expected_doi, (
-        f"{label}: adapter must surface the upstream DOI in identifiers.doi, "
-        f"normalised to bare lower-case form"
+        f"{label}: adapter must surface the upstream DOI in identifiers.doi, normalised to bare lower-case form"
     )
 
 

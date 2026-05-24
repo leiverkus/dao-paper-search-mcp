@@ -31,20 +31,16 @@ Priority of ``url``:
 from __future__ import annotations
 
 import re
-from typing import List, Optional
 from urllib.parse import urlparse
 
 from .models import Audit, Identifiers, InlineCitation, Venue
-
 
 _FAMILY_NAME_RE = re.compile(r"^([^,]+),")  # "Cohen, R." -> "Cohen"
 _TITLE_MAX_LEN = 60  # truncation threshold for the domain-title form (v2)
 
 # Family-name particles that must travel with the family name.
 # Lower-cased for matching; ordering does not matter.
-_PARTICLES = frozenset(
-    {"van", "von", "de", "der", "den", "del", "della", "di", "da", "le", "la", "el"}
-)
+_PARTICLES = frozenset({"van", "von", "de", "der", "den", "del", "della", "di", "da", "le", "la", "el"})
 
 
 def _family_name(author: str) -> str:
@@ -69,11 +65,11 @@ def _family_name(author: str) -> str:
         family = m.group(1).strip()
         # Comma-style: check for trailing particles in the given-name tail
         # ("Plicht, J. van der") and rejoin them as a prefix.
-        tail = s[m.end():].strip()
+        tail = s[m.end() :].strip()
         if tail:
             tail_tokens = tail.replace(".", " ").split()
             # Walk from the end collecting particles.
-            particles_suffix: List[str] = []
+            particles_suffix: list[str] = []
             i = len(tail_tokens) - 1
             while i >= 0 and tail_tokens[i].lower() in _PARTICLES:
                 particles_suffix.insert(0, tail_tokens[i])
@@ -104,7 +100,7 @@ def _family_name(author: str) -> str:
     return s
 
 
-def _format_author_label(authors: List[str], year: Optional[int]) -> Optional[str]:
+def _format_author_label(authors: list[str], year: int | None) -> str | None:
     """Inline Author-Year label for the ``markdown`` field.
 
     Schema v2 rules:
@@ -142,7 +138,7 @@ def _format_author_label(authors: List[str], year: Optional[int]) -> Optional[st
     return f"{head} {year}"
 
 
-def _split_family_given(author: str) -> tuple[str, Optional[str]]:
+def _split_family_given(author: str) -> tuple[str, str | None]:
     """Split one author string into (family, given). ``given`` is ``None``
     if not parseable.
 
@@ -155,7 +151,7 @@ def _split_family_given(author: str) -> tuple[str, Optional[str]]:
         family = m.group(1).strip()
         # Particle suffix already folded by _family_name; for bibliography
         # we need the given part separately. Strip trailing particle run.
-        rest_raw = s[m.end():].strip()
+        rest_raw = s[m.end() :].strip()
         if rest_raw:
             tokens = rest_raw.replace(".", " . ").split()
             # Re-emit with original dots: split on whitespace, then re-add
@@ -186,7 +182,7 @@ def _initial(given: str) -> str:
     Already-abbreviated forms (``"R."`` or ``"R. M."``) pass through.
     Used by the bibliography-line author formatter only.
     """
-    out_parts: List[str] = []
+    out_parts: list[str] = []
     for tok in given.replace(".", " ").split():
         if not tok:
             continue
@@ -203,7 +199,7 @@ def _format_one_author_bib(author: str) -> str:
     return family
 
 
-def _format_authors_full_bibliography(authors: List[str]) -> str:
+def _format_authors_full_bibliography(authors: list[str]) -> str:
     """Full author list for a bibliography entry.
 
     - 1 author          → ``"Cohen, R."``
@@ -225,14 +221,14 @@ def _format_authors_full_bibliography(authors: List[str]) -> str:
 
 
 def build_bibliography_line(
-    authors: List[str],
-    year: Optional[int],
-    title: Optional[str],
-    venue: Optional[Venue],
+    authors: list[str],
+    year: int | None,
+    title: str | None,
+    venue: Venue | None,
     *,
-    doi: Optional[str] = None,
-    primary_url: Optional[str] = None,
-) -> Optional[str]:
+    doi: str | None = None,
+    primary_url: str | None = None,
+) -> str | None:
     """Render the full bibliography-entry line.
 
     Format: ``"{Authors} ({Year}). {Title}. *{Venue}* {Vol}({Issue}), {Pages}. DOI: [doi](url)"``
@@ -272,7 +268,7 @@ def build_bibliography_line(
     return line
 
 
-def _format_fallback(authors: List[str], year: Optional[int], pages: Optional[str]) -> str:
+def _format_fallback(authors: list[str], year: int | None, pages: str | None) -> str:
     """Author-Year-page form for print-only hits with no link target.
 
     Deliberately divergent from ``_format_author_label``: this is the
@@ -333,9 +329,9 @@ def _shorten_url_for_label(url: str) -> str:
 
 def _pick_primary_url(
     identifiers: Identifiers,
-    landing_page_url: Optional[str],
-    open_access_url: Optional[str],
-) -> Optional[str]:
+    landing_page_url: str | None,
+    open_access_url: str | None,
+) -> str | None:
     """Apply the source-priority table to choose one canonical URL.
 
     DOI ranks highest because it survives publisher migrations; the
@@ -386,10 +382,10 @@ def _pick_primary_url(
 
 def render_markdown(
     *,
-    authors: List[str],
-    year: Optional[int],
-    title: Optional[str],
-    primary_url: Optional[str],
+    authors: list[str],
+    year: int | None,
+    title: str | None,
+    primary_url: str | None,
     audit: Audit,
     fallback_text: str,
 ) -> str:
@@ -433,21 +429,24 @@ def render_markdown(
 
 def build_inline_citation(
     *,
-    authors: List[str],
-    year: Optional[int],
-    pages: Optional[str],
-    title: Optional[str],
+    authors: list[str],
+    year: int | None,
+    pages: str | None,
+    title: str | None,
     identifiers: Identifiers,
-    landing_page_url: Optional[str],
-    open_access_url: Optional[str],
+    landing_page_url: str | None,
+    open_access_url: str | None,
     audit: Audit,
-    venue: Optional[Venue] = None,
+    venue: Venue | None = None,
 ) -> InlineCitation:
     fallback_text = _format_fallback(authors, year, pages)
     primary_url = _pick_primary_url(identifiers, landing_page_url, open_access_url)
     authoritative_authors_label = _format_author_label(authors, year)
     authoritative_bibliography_line = build_bibliography_line(
-        authors, year, title, venue,
+        authors,
+        year,
+        title,
+        venue,
         doi=identifiers.doi,
         primary_url=primary_url,
     )

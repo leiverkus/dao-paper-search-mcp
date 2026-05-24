@@ -2,26 +2,26 @@
 
 from __future__ import annotations
 
+import xml.etree.ElementTree as ET
+
+import httpx
 import pytest
 import respx
-import httpx
 
 from dao_paper_search_mcp.adapters.ixtheo import (
+    BSZ_SRU,
     _clean_title,
     _extract_authors,
     _extract_doi,
     _extract_language,
     _extract_venue,
     _extract_year,
-    _pica_subfield,
-    _pica_all_subfields,
     _parse_page,
+    _pica_all_subfields,
+    _pica_subfield,
     _record_to_paper,
     search_ixtheo_impl,
-    BSZ_SRU,
 )
-
-import xml.etree.ElementTree as ET
 
 # ---------------------------------------------------------------------------
 # Shared XML namespace declaration for PICA records in test fixtures
@@ -196,6 +196,7 @@ SRU_ERROR_RESPONSE = """\
 # Helper: build a minimal PICA record element from a dict of {tag: {code: text}}
 # ---------------------------------------------------------------------------
 
+
 def _make_pica_record(fields: dict) -> ET.Element:
     """Build a PICA record element for unit tests.
 
@@ -217,6 +218,7 @@ def _make_pica_record(fields: dict) -> ET.Element:
 # Unit tests: _clean_title
 # ---------------------------------------------------------------------------
 
+
 def test_clean_title_strips_sort_marker():
     assert _clean_title("@Archaeology and the @Hebrew Bible") == "Archaeology and the Hebrew Bible"
 
@@ -232,6 +234,7 @@ def test_clean_title_empty():
 # ---------------------------------------------------------------------------
 # Unit tests: _pica_subfield / _pica_all_subfields
 # ---------------------------------------------------------------------------
+
 
 def test_pica_subfield_found():
     r = _make_pica_record({"003@": [("0", "PPN123")]})
@@ -257,6 +260,7 @@ def test_pica_all_subfields_multiple():
 # ---------------------------------------------------------------------------
 # Unit tests: _extract_authors
 # ---------------------------------------------------------------------------
+
 
 def test_extract_authors_single():
     r = _make_pica_record({"028A": [("A", "Maeir"), ("D", "Aren M.")]})
@@ -289,6 +293,7 @@ def test_extract_authors_empty():
 # Unit tests: _extract_year
 # ---------------------------------------------------------------------------
 
+
 def test_extract_year_bare():
     r = _make_pica_record({"011@": [("a", "2021")]})
     assert _extract_year(r) == 2021
@@ -308,15 +313,19 @@ def test_extract_year_missing():
 # Unit tests: _extract_language
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("iso3,expected", [
-    ("eng", "en"),
-    ("deu", "de"),
-    ("ger", "de"),
-    ("fra", "fr"),
-    ("lat", "la"),
-    ("heb", "he"),
-    ("ara", "ar"),
-])
+
+@pytest.mark.parametrize(
+    "iso3,expected",
+    [
+        ("eng", "en"),
+        ("deu", "de"),
+        ("ger", "de"),
+        ("fra", "fr"),
+        ("lat", "la"),
+        ("heb", "he"),
+        ("ara", "ar"),
+    ],
+)
 def test_extract_language_iso3(iso3, expected):
     r = _make_pica_record({"010@": [("a", iso3)]})
     assert _extract_language(r) == expected
@@ -335,6 +344,7 @@ def test_extract_language_unknown_iso3():
 # ---------------------------------------------------------------------------
 # Unit tests: _extract_doi
 # ---------------------------------------------------------------------------
+
 
 def test_extract_doi_bare_004v():
     r = _make_pica_record({"004V": [("0", "10.1093/jaos/141.2.345")]})
@@ -369,6 +379,7 @@ def test_extract_doi_normalises_case():
 # ---------------------------------------------------------------------------
 # Unit tests: _extract_venue
 # ---------------------------------------------------------------------------
+
 
 def test_extract_venue_full():
     ns = "info:srw/schema/5/picaXML-v1.0"
@@ -407,6 +418,7 @@ def test_extract_venue_missing():
 # ---------------------------------------------------------------------------
 # Unit tests: _record_to_paper
 # ---------------------------------------------------------------------------
+
 
 def _sample_record_element() -> ET.Element:
     """Return the first pica:record element from SAMPLE_SRU_RESPONSE."""
@@ -469,12 +481,14 @@ def test_record_to_paper_keyword_filter_no_match():
 
 
 def test_record_to_paper_no_doi_uses_ppn():
-    r = _make_pica_record({
-        "003@": [("0", "PPNABC")],
-        "021A": [("a", "Title without DOI about biblical studies")],
-        "010@": [("a", "eng")],
-        "011@": [("a", "2020")],
-    })
+    r = _make_pica_record(
+        {
+            "003@": [("0", "PPNABC")],
+            "021A": [("a", "Title without DOI about biblical studies")],
+            "010@": [("a", "eng")],
+            "011@": [("a", "2020")],
+        }
+    )
     paper = _record_to_paper(r, [])
     assert paper is not None
     assert paper.doi_or_id == "ixtheo:PPNABC"
@@ -489,6 +503,7 @@ def test_record_to_paper_no_ppn_no_doi_returns_none():
 # ---------------------------------------------------------------------------
 # Unit tests: _parse_page
 # ---------------------------------------------------------------------------
+
 
 def test_parse_page_returns_both_records():
     papers, next_pos = _parse_page(SAMPLE_SRU_RESPONSE, [])
@@ -532,6 +547,7 @@ def test_parse_page_no_next_when_absent():
 # Integration tests: search_ixtheo_impl (mocked HTTP)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_search_returns_papers():
     async with respx.mock(base_url=BSZ_SRU) as mock:
@@ -569,9 +585,7 @@ async def test_search_pagination():
 
     async with respx.mock(base_url=BSZ_SRU) as mock:
         mock.get("").mock(side_effect=_handler)
-        papers = await search_ixtheo_impl(
-            "levant archaeology", max_results=10, client=httpx.AsyncClient()
-        )
+        papers = await search_ixtheo_impl("levant archaeology", max_results=10, client=httpx.AsyncClient())
     assert call_count == 2
     assert len(papers) == 2
 
@@ -594,9 +608,7 @@ async def test_search_year_range_included_in_cql():
 
     async with respx.mock(base_url=BSZ_SRU) as mock:
         mock.get("").mock(side_effect=_handler)
-        await search_ixtheo_impl(
-            "Levant", year_from=2000, year_to=2010, client=httpx.AsyncClient()
-        )
+        await search_ixtheo_impl("Levant", year_from=2000, year_to=2010, client=httpx.AsyncClient())
     assert captured
     # CQL year filter should appear URL-encoded in the query param
     assert "2000" in captured[0]

@@ -15,7 +15,8 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, Optional
+from collections.abc import Mapping
+from typing import Any
 
 import httpx
 from mcp.server.fastmcp import FastMCP
@@ -30,7 +31,7 @@ GAZETTEER_PLACE_URL = "https://gazetteer.dainst.org/place/{gaz_id}"
 HTTP_TIMEOUT = 15.0
 
 
-def gaz_id_from_uri(uri: str) -> Optional[str]:
+def gaz_id_from_uri(uri: str) -> str | None:
     """Extract the numeric gazId from a place URI.
 
     ``https://gazetteer.dainst.org/place/2043520`` -> ``"2043520"``
@@ -46,7 +47,7 @@ def _site_id_token(gaz_id: str) -> str:
     return f"gazetteer:{gaz_id}"
 
 
-def site_id_tokens_from_zenon_record(record: dict[str, Any]) -> list[str]:
+def site_id_tokens_from_zenon_record(record: Mapping[str, Any]) -> list[str]:
     """Pull `DAILinks.gazetteer[].uri` from a Zenon record and convert to
     ``gazetteer:<gazId>`` tokens. Used by the Zenon adapter to populate
     ``DAOPaper.site_ids`` automatically."""
@@ -60,7 +61,7 @@ def site_id_tokens_from_zenon_record(record: dict[str, Any]) -> list[str]:
     return out
 
 
-def _coords(rec: dict[str, Any]) -> Optional[tuple[float, float]]:
+def _coords(rec: dict[str, Any]) -> tuple[float, float] | None:
     loc = (rec.get("prefLocation") or {}).get("coordinates")
     if isinstance(loc, list) and len(loc) >= 2:
         # gazetteer stores [lon, lat] (GeoJSON-style)
@@ -72,7 +73,7 @@ def _coords(rec: dict[str, Any]) -> Optional[tuple[float, float]]:
     return None
 
 
-def _identifier_value(rec: dict[str, Any], context: str) -> Optional[str]:
+def _identifier_value(rec: dict[str, Any], context: str) -> str | None:
     """Pluck the value for an identifier matching ``context`` (e.g.
     ``"pleiades"`` or ``"geonames"``) out of the gazetteer's
     ``identifiers`` list."""
@@ -88,7 +89,11 @@ def _identifier_value(rec: dict[str, Any], context: str) -> Optional[str]:
 def _record_to_site(rec: dict[str, Any]) -> ResolvedSite:
     gaz_id = str(rec.get("gazId") or "")
     pref = rec.get("prefName") or {}
-    variants = [n.get("title") for n in (rec.get("names") or []) if isinstance(n, dict) and n.get("title")]
+    variants: list[str] = [
+        title
+        for n in (rec.get("names") or [])
+        if isinstance(n, dict) and isinstance(title := n.get("title"), str) and title
+    ]
 
     ancestors_uri = rec.get("ancestors") or []
     ancestor_ids = [aid for aid in (gaz_id_from_uri(u) for u in ancestors_uri) if aid]
@@ -114,7 +119,7 @@ async def search_gazetteer_impl(
     query: str,
     max_results: int = 5,
     *,
-    client: Optional[httpx.AsyncClient] = None,
+    client: httpx.AsyncClient | None = None,
 ) -> list[ResolvedSite]:
     """Free-text search of the iDAI.gazetteer."""
     headers = {
@@ -139,7 +144,7 @@ async def search_gazetteer_impl(
 async def resolve_site_impl(
     query: str,
     *,
-    client: Optional[httpx.AsyncClient] = None,
+    client: httpx.AsyncClient | None = None,
 ) -> ResolvedSite:
     """Resolve a single site name to its top gazetteer match.
 

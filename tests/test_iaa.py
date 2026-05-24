@@ -29,7 +29,6 @@ from dao_paper_search_mcp.adapters.iaa import (
 )
 from dao_paper_search_mcp.models import DAOPaper
 
-
 # A realistic OAI-PMH response: one English Atiqot article plus one
 # Hebrew Hadashot record. Shape mirrors what /do/oai/?verb=ListRecords
 # actually returns (probed 2026-05-15).
@@ -173,10 +172,7 @@ def test_classify_identifiers_handles_missing_pieces() -> None:
 
 
 def test_pub_id_from_landing_strips_domain() -> None:
-    assert (
-        _pub_id_from_landing("https://publications.iaa.org.il/atiqot/vol116/iss1/3")
-        == "atiqot/vol116/iss1/3"
-    )
+    assert _pub_id_from_landing("https://publications.iaa.org.il/atiqot/vol116/iss1/3") == "atiqot/vol116/iss1/3"
     # Off-domain → None, not garbage.
     assert _pub_id_from_landing("https://doi.org/10.1/x") is None
     assert _pub_id_from_landing(None) is None
@@ -199,9 +195,7 @@ def test_record_matches_and_of_tokens() -> None:
     # Every token must appear somewhere.
     assert _record_matches(["cohen", "negev"], "Cohen Survey", "Negev fortress study", [], [])
     # Missing token → no match.
-    assert not _record_matches(
-        ["cohen", "byzantine"], "Cohen Survey", "Negev fortress", [], []
-    )
+    assert not _record_matches(["cohen", "byzantine"], "Cohen Survey", "Negev fortress", [], [])
     # Token in subjects also counts.
     assert _record_matches(["radiocarbon"], "x", "y", ["radiocarbon dating"], [])
     # Token in authors also counts.
@@ -246,9 +240,7 @@ def test_parse_page_extracts_matching_records() -> None:
     assert p.identifiers.iaa_pub_id == "atiqot/vol116/iss1/3"
     # Inline citation: DOI present → Author-Year against doi.org.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown == (
-        "[(Cohen & Yisrael 2024)](https://doi.org/10.70967/2948-040x.1124)"
-    )
+    assert p.inline_citation.markdown == ("[(Cohen & Yisrael 2024)](https://doi.org/10.70967/2948-040x.1124)")
     assert p.language == "en"
     assert p.open_access_url is not None
     assert str(p.open_access_url).endswith("en_116.pdf")
@@ -306,9 +298,7 @@ def test_parse_page_skips_deleted_records() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_iaa_impl_happy_path() -> None:
-    respx.get(IAA_OAI).mock(
-        return_value=httpx.Response(200, text=SAMPLE_LISTRECORDS)
-    )
+    respx.get(IAA_OAI).mock(return_value=httpx.Response(200, text=SAMPLE_LISTRECORDS))
     results = await search_iaa_impl("Negev Iron Age", max_results=5)
     assert len(results) == 1
     p = results[0]
@@ -321,9 +311,7 @@ async def test_search_iaa_impl_happy_path() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_iaa_impl_empty() -> None:
-    respx.get(IAA_OAI).mock(
-        return_value=httpx.Response(200, text=EMPTY_LISTRECORDS)
-    )
+    respx.get(IAA_OAI).mock(return_value=httpx.Response(200, text=EMPTY_LISTRECORDS))
     assert await search_iaa_impl("xyzzy") == []
 
 
@@ -353,7 +341,8 @@ async def test_search_iaa_impl_paginates_via_resumption_token() -> None:
     assert call_count["n"] == 2
     assert len(results) == 2
     assert {p.identifiers.doi for p in results if p.identifiers} == {
-        "10.70967/test.1", "10.70967/test.2",
+        "10.70967/test.1",
+        "10.70967/test.2",
     }
 
 
@@ -380,9 +369,7 @@ async def test_search_iaa_impl_defaults_to_atiqot_set() -> None:
     """v0.6.1: ensure the URL sent to OAI carries ``set=publication:atiqot``
     when the caller doesn't specify a collection — the no-set path is
     too slow for MCP timeouts."""
-    route = respx.get(IAA_OAI).mock(
-        return_value=httpx.Response(200, text=EMPTY_LISTRECORDS)
-    )
+    route = respx.get(IAA_OAI).mock(return_value=httpx.Response(200, text=EMPTY_LISTRECORDS))
     await search_iaa_impl("anything", max_results=5)
     assert route.called
     sent_url = str(route.calls.last.request.url)
@@ -394,9 +381,7 @@ async def test_search_iaa_impl_defaults_to_atiqot_set() -> None:
 async def test_search_iaa_impl_all_keyword_drops_set_filter() -> None:
     """v0.6.1: collection="all" opts in to the slow whole-archive scan
     by omitting the ``set=`` parameter entirely."""
-    route = respx.get(IAA_OAI).mock(
-        return_value=httpx.Response(200, text=EMPTY_LISTRECORDS)
-    )
+    route = respx.get(IAA_OAI).mock(return_value=httpx.Response(200, text=EMPTY_LISTRECORDS))
     await search_iaa_impl("anything", max_results=5, collection="all")
     assert route.called
     sent_url = str(route.calls.last.request.url)
@@ -406,9 +391,7 @@ async def test_search_iaa_impl_all_keyword_drops_set_filter() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_iaa_impl_forwards_collection_and_year() -> None:
-    route = respx.get(IAA_OAI).mock(
-        return_value=httpx.Response(200, text=EMPTY_LISTRECORDS)
-    )
+    route = respx.get(IAA_OAI).mock(return_value=httpx.Response(200, text=EMPTY_LISTRECORDS))
     await search_iaa_impl(
         "carbon dating",
         max_results=5,

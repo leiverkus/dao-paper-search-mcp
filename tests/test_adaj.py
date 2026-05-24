@@ -70,10 +70,7 @@ def test_parse_results_first_hit_shape() -> None:
 
 
 def test_filter_by_year_inclusive_bounds() -> None:
-    papers = [
-        DAOPaper(title=f"p{y}", doi_or_id=str(y), source="adaj", year=y)
-        for y in (2005, 2009, 2012, 2020)
-    ]
+    papers = [DAOPaper(title=f"p{y}", doi_or_id=str(y), source="adaj", year=y) for y in (2005, 2009, 2012, 2020)]
     assert [p.year for p in _filter_by_year(papers, 2009, 2012)] == [2009, 2012]
     assert [p.year for p in _filter_by_year(papers, None, 2010)] == [2005, 2009]
     assert [p.year for p in _filter_by_year(papers, 2010, None)] == [2012, 2020]
@@ -95,9 +92,7 @@ def test_filter_by_year_drops_unknown_year() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_adaj_impl_happy_path() -> None:
-    respx.get(ADAJ_SEARCH).mock(
-        return_value=httpx.Response(200, text=_read("adaj_search_negev.html"))
-    )
+    respx.get(ADAJ_SEARCH).mock(return_value=httpx.Response(200, text=_read("adaj_search_negev.html")))
     papers = await search_adaj_impl("Negev", max_results=5)
     assert len(papers) == 5
     assert papers[0].title.startswith("Judah Versus Edom")
@@ -106,9 +101,7 @@ async def test_search_adaj_impl_happy_path() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_adaj_impl_year_filter() -> None:
-    respx.get(ADAJ_SEARCH).mock(
-        return_value=httpx.Response(200, text=_read("adaj_search_negev.html"))
-    )
+    respx.get(ADAJ_SEARCH).mock(return_value=httpx.Response(200, text=_read("adaj_search_negev.html")))
     papers = await search_adaj_impl("Negev", max_results=10, year_from=2008, year_to=2010)
     assert all(p.year is not None and 2008 <= p.year <= 2010 for p in papers)
 
@@ -124,9 +117,7 @@ async def test_search_adaj_impl_http_error_propagates() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_adaj_impl_forwards_query_param() -> None:
-    route = respx.get(ADAJ_SEARCH).mock(
-        return_value=httpx.Response(200, text="<html><body></body></html>")
-    )
+    route = respx.get(ADAJ_SEARCH).mock(return_value=httpx.Response(200, text="<html><body></body></html>"))
     await search_adaj_impl("Cohen Bernick-Greenberg Kadesh-Barnea")
     assert route.called
     sent_url = str(route.calls.last.request.url)

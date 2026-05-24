@@ -2,25 +2,25 @@
 
 from __future__ import annotations
 
-import pytest
-import respx
-import httpx
 import xml.etree.ElementTree as ET
 
+import httpx
+import pytest
+import respx
+
 from dao_paper_search_mcp.adapters.gnomon import (
-    _extract_authors,
+    K10PLUS_SRU,
     _extract_doi,
     _extract_language,
     _extract_title,
     _extract_venue,
     _extract_year,
+    _parse_page,
+    _pica_all_subfields,
     _pica_author_from_datafield,
     _pica_subfield,
-    _pica_all_subfields,
-    _parse_page,
     _record_to_paper,
     search_gnomon_impl,
-    K10PLUS_SRU,
 )
 
 _NS = "info:srw/schema/5/picaXML-v1.0"
@@ -30,6 +30,7 @@ _PICA_NS = {"pica": _NS}
 # ---------------------------------------------------------------------------
 # Helper: build a minimal PICA record element
 # ---------------------------------------------------------------------------
+
 
 def _make_record(fields: dict) -> ET.Element:
     """fields: {tag: [(code, text), ...]}"""
@@ -170,6 +171,7 @@ PAGE_TWO = """\
 # Unit tests: _pica_subfield / _pica_all_subfields
 # ---------------------------------------------------------------------------
 
+
 def test_pica_subfield_found():
     r = _make_record({"003@": [("0", "PPN999")]})
     assert _pica_subfield(r, "003@", "0") == "PPN999"
@@ -188,6 +190,7 @@ def test_pica_all_subfields_multiple():
 # ---------------------------------------------------------------------------
 # Unit tests: _pica_author_from_datafield — uppercase and lowercase variants
 # ---------------------------------------------------------------------------
+
 
 def test_author_uppercase_gnd_linked():
     df = ET.Element(f"{{{_NS}}}datafield", {"tag": "028A"})
@@ -221,6 +224,7 @@ def test_author_empty():
 # Unit tests: _extract_title
 # ---------------------------------------------------------------------------
 
+
 def test_extract_title_main_only():
     r = _make_record({"021A": [("a", "Iron Age Levant")]})
     assert _extract_title(r) == "Iron Age Levant"
@@ -245,6 +249,7 @@ def test_extract_title_missing():
 # Unit tests: _extract_year / _extract_language / _extract_doi
 # ---------------------------------------------------------------------------
 
+
 def test_extract_year():
     r = _make_record({"011@": [("a", "2006")]})
     assert _extract_year(r) == 2006
@@ -255,10 +260,18 @@ def test_extract_year_missing():
     assert _extract_year(r) is None
 
 
-@pytest.mark.parametrize("iso3,expected", [
-    ("eng", "en"), ("ger", "de"), ("deu", "de"), ("fra", "fr"),
-    ("lat", "la"), ("grc", "el"), ("heb", "he"),
-])
+@pytest.mark.parametrize(
+    "iso3,expected",
+    [
+        ("eng", "en"),
+        ("ger", "de"),
+        ("deu", "de"),
+        ("fra", "fr"),
+        ("lat", "la"),
+        ("grc", "el"),
+        ("heb", "he"),
+    ],
+)
 def test_extract_language(iso3, expected):
     r = _make_record({"010@": [("a", iso3)]})
     assert _extract_language(r) == expected
@@ -280,10 +293,12 @@ def test_extract_doi_url_fallback():
 
 
 def test_extract_doi_bare_priority():
-    r = _make_record({
-        "004V": [("0", "10.1000/bare")],
-        "017C": [("u", "https://doi.org/10.1000/url")],
-    })
+    r = _make_record(
+        {
+            "004V": [("0", "10.1000/bare")],
+            "017C": [("u", "https://doi.org/10.1000/url")],
+        }
+    )
     assert _extract_doi(r) == "10.1000/bare"
 
 
@@ -301,11 +316,14 @@ def test_extract_doi_normalises_case():
 # Unit tests: _extract_venue
 # ---------------------------------------------------------------------------
 
+
 def test_extract_venue_journal():
-    r = _make_record({
-        "039B": [("t", "Near Eastern Archaeology")],
-        "031A": [("d", "88"), ("e", "3"), ("h", "240-247")],
-    })
+    r = _make_record(
+        {
+            "039B": [("t", "Near Eastern Archaeology")],
+            "031A": [("d", "88"), ("e", "3"), ("h", "240-247")],
+        }
+    )
     v = _extract_venue(r)
     assert v is not None
     assert v.name == "Near Eastern Archaeology"
@@ -315,28 +333,34 @@ def test_extract_venue_journal():
 
 
 def test_extract_venue_series_fallback():
-    r = _make_record({
-        "036E": [("a", "Beiträge zur Altertumskunde")],
-    })
+    r = _make_record(
+        {
+            "036E": [("a", "Beiträge zur Altertumskunde")],
+        }
+    )
     v = _extract_venue(r)
     assert v is not None
     assert v.name == "Beiträge zur Altertumskunde"
 
 
 def test_extract_venue_publisher_fallback():
-    r = _make_record({
-        "033A": [("p", "München"), ("n", "K.G. Saur")],
-    })
+    r = _make_record(
+        {
+            "033A": [("p", "München"), ("n", "K.G. Saur")],
+        }
+    )
     v = _extract_venue(r)
     assert v is not None
     assert v.name == "K.G. Saur"
 
 
 def test_extract_venue_journal_preferred_over_series():
-    r = _make_record({
-        "039B": [("t", "Journal Name")],
-        "036E": [("a", "Series Name")],
-    })
+    r = _make_record(
+        {
+            "039B": [("t", "Journal Name")],
+            "036E": [("a", "Series Name")],
+        }
+    )
     v = _extract_venue(r)
     assert v is not None
     assert v.name == "Journal Name"
@@ -350,6 +374,7 @@ def test_extract_venue_missing():
 # ---------------------------------------------------------------------------
 # Unit tests: _record_to_paper
 # ---------------------------------------------------------------------------
+
 
 def _sample_record_1() -> ET.Element:
     root = ET.fromstring(SAMPLE_SRU_RESPONSE)
@@ -430,12 +455,14 @@ def test_record_to_paper_keyword_no_match():
 
 
 def test_record_to_paper_no_doi_ppn_fallback():
-    r = _make_record({
-        "003@": [("0", "PPNXYZ")],
-        "010@": [("a", "eng")],
-        "011@": [("a", "2010")],
-        "021A": [("a", "A classical Hellenistic Levant study")],
-    })
+    r = _make_record(
+        {
+            "003@": [("0", "PPNXYZ")],
+            "010@": [("a", "eng")],
+            "011@": [("a", "2010")],
+            "021A": [("a", "A classical Hellenistic Levant study")],
+        }
+    )
     p = _record_to_paper(r, [])
     assert p is not None
     assert p.doi_or_id == "gnomon:PPNXYZ"
@@ -456,6 +483,7 @@ def test_record_to_paper_landing_url_from_doi():
 # ---------------------------------------------------------------------------
 # Unit tests: _parse_page
 # ---------------------------------------------------------------------------
+
 
 def test_parse_page_returns_both_records():
     papers, next_pos = _parse_page(SAMPLE_SRU_RESPONSE, [])
@@ -494,6 +522,7 @@ def test_parse_page_no_next_position():
 # ---------------------------------------------------------------------------
 # Integration tests: search_gnomon_impl (mocked HTTP)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_search_returns_papers():

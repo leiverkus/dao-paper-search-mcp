@@ -7,8 +7,6 @@ exercises the real endpoint.
 
 from __future__ import annotations
 
-import json
-
 import httpx
 import pytest
 import respx
@@ -97,7 +95,7 @@ def test_build_params_with_filters() -> None:
     )
     assert ("lookfor", "Negev fortresses") in params
     assert ("limit", "5") in params
-    assert ('filter[]', 'language:"English"') in params
+    assert ("filter[]", 'language:"English"') in params
     assert ("filter[]", "publishDate:[1990 TO 2000]") in params
 
 
@@ -144,9 +142,7 @@ async def test_search_zenon_impl_happy_path() -> None:
     # via the canonical zenon URL when no DOI is available.
     assert p.inline_citation is not None
     assert p.inline_citation.markdown.startswith("[(Beit-Arieh & Beck 1995)]")
-    assert str(p.inline_citation.url) == (
-        "https://zenon.dainst.org/Record/001388596"
-    )
+    assert str(p.inline_citation.url) == ("https://zenon.dainst.org/Record/001388596")
     assert p.identifiers is not None
     assert p.identifiers.zenon_id == "001388596"
 
@@ -154,11 +150,7 @@ async def test_search_zenon_impl_happy_path() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_zenon_impl_empty() -> None:
-    respx.get(ZENON_API).mock(
-        return_value=httpx.Response(
-            200, json={"resultCount": 0, "records": [], "status": "OK"}
-        )
-    )
+    respx.get(ZENON_API).mock(return_value=httpx.Response(200, json={"resultCount": 0, "records": [], "status": "OK"}))
     assert await search_zenon_impl("xyzzy-no-such-query") == []
 
 
@@ -176,9 +168,7 @@ async def test_search_zenon_impl_http_error_propagates() -> None:
 @respx.mock
 async def test_search_zenon_impl_query_params_forwarded() -> None:
     route = respx.get(ZENON_API).mock(
-        return_value=httpx.Response(
-            200, json={"resultCount": 0, "records": [], "status": "OK"}
-        )
+        return_value=httpx.Response(200, json={"resultCount": 0, "records": [], "status": "OK"})
     )
     await search_zenon_impl(
         "Cohen Yisrael BASOR",

@@ -50,9 +50,7 @@ def _has_match(papers: list[DAOPaper], **expect: object) -> bool:
     """
     expect_author = expect.pop("expect_author", None)
     for p in papers:
-        if expect_author is not None and not any(
-            str(expect_author).lower() in a.lower() for a in p.authors
-        ):
+        if expect_author is not None and not any(str(expect_author).lower() in a.lower() for a in p.authors):
             continue
         ok = True
         for k, v in expect.items():
@@ -83,9 +81,7 @@ def _has_match(papers: list[DAOPaper], **expect: object) -> bool:
 )
 @pytest.mark.asyncio
 async def test_ref_ben_ami_2024_levant_found_via_zenon() -> None:
-    papers = await search_zenon_impl(
-        "Ben-Ami Standing crossroads En Haseva Iron Age IIA", max_results=10
-    )
+    papers = await search_zenon_impl("Ben-Ami Standing crossroads En Haseva Iron Age IIA", max_results=10)
     assert papers, "no candidates"
     assert _has_match(papers, expect_author="Ben-Ami", year=2024)
 
@@ -140,9 +136,7 @@ async def test_ref_ben_ami_2026_levant_NOT_FOUND_zenon() -> None:
 )
 @pytest.mark.asyncio
 async def test_ref_bienkowski_tebes_2024_peq_found_via_zenon() -> None:
-    papers = await search_zenon_impl(
-        "Bienkowski Tebes Palestine Exploration Quarterly", max_results=10
-    )
+    papers = await search_zenon_impl("Bienkowski Tebes Palestine Exploration Quarterly", max_results=10)
     assert _has_match(
         papers,
         expect_author="Bienkowski",

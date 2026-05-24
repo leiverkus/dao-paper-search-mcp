@@ -83,13 +83,8 @@ def test_adaj_chapter() -> None:
         open_access_url=None,
         audit=_audit(),
     )
-    assert str(ic.url) == (
-        "https://publication.doa.gov.jo/Publications/ViewChapterPublic/212"
-    )
-    assert ic.markdown == (
-        "[(Bienkowski 2013)]"
-        "(https://publication.doa.gov.jo/Publications/ViewChapterPublic/212)"
-    )
+    assert str(ic.url) == ("https://publication.doa.gov.jo/Publications/ViewChapterPublic/212")
+    assert ic.markdown == ("[(Bienkowski 2013)](https://publication.doa.gov.jo/Publications/ViewChapterPublic/212)")
 
 
 # ---------------------------------------------------------------------------
@@ -124,8 +119,7 @@ def test_markdown_falls_back_to_domain_title_without_year() -> None:
         audit=_audit(),
     )
     assert ic.markdown == (
-        "[(publications.iaa.org.il — Some Excavation Report)]"
-        "(https://publications.iaa.org.il/report/12)"
+        "[(publications.iaa.org.il — Some Excavation Report)](https://publications.iaa.org.il/report/12)"
     )
 
 
@@ -184,9 +178,7 @@ def test_two_author_inline_form() -> None:
         audit=_audit(),
     )
     assert ic.authoritative_authors_label == "Carmi & Segal 2007"
-    assert ic.markdown == (
-        "[(Carmi & Segal 2007)](https://publications.iaa.org.il/favissa/312)"
-    )
+    assert ic.markdown == ("[(Carmi & Segal 2007)](https://publications.iaa.org.il/favissa/312)")
 
 
 def test_three_author_inline_form() -> None:
@@ -202,13 +194,8 @@ def test_three_author_inline_form() -> None:
         open_access_url=None,
         audit=_audit(),
     )
-    assert ic.authoritative_authors_label == (
-        "Boaretto, Finkelstein & Shahack-Gross 2010"
-    )
-    assert ic.markdown == (
-        "[(Boaretto, Finkelstein & Shahack-Gross 2010)]"
-        "(https://doi.org/10.1017/S0033822200044982)"
-    )
+    assert ic.authoritative_authors_label == ("Boaretto, Finkelstein & Shahack-Gross 2010")
+    assert ic.markdown == ("[(Boaretto, Finkelstein & Shahack-Gross 2010)](https://doi.org/10.1017/S0033822200044982)")
 
 
 def test_four_plus_author_et_al() -> None:
@@ -228,9 +215,7 @@ def test_four_plus_author_et_al() -> None:
         audit=_audit(),
     )
     assert ic.authoritative_authors_label == "Bruins et al. 2011"
-    assert ic.markdown == (
-        "[(Bruins et al. 2011)](https://doi.org/10.1017/s0033822200034470)"
-    )
+    assert ic.markdown == ("[(Bruins et al. 2011)](https://doi.org/10.1017/s0033822200034470)")
 
 
 def test_particle_name_van_der_plicht_comma_first() -> None:
@@ -326,10 +311,7 @@ def test_bibliography_line_two_authors_with_oxford_comma() -> None:
         title="The Iron Age in the Negev highlands",
         venue=Venue(name="Tel Aviv", volume="22", issue=None, pages="203–215"),
     )
-    assert line == (
-        "Cohen, R., & Yisrael, Y. (1995). The Iron Age in the Negev "
-        "highlands. *Tel Aviv* 22, 203–215."
-    )
+    assert line == ("Cohen, R., & Yisrael, Y. (1995). The Iron Age in the Negev highlands. *Tel Aviv* 22, 203–215.")
 
 
 def test_bibliography_line_single_author() -> None:
@@ -339,10 +321,7 @@ def test_bibliography_line_single_author() -> None:
         title="The Iron Age Fortresses in the Central Negev",
         venue=Venue(name="BASOR", volume="236", pages="61–79"),
     )
-    assert line == (
-        "Cohen, R. (1979). The Iron Age Fortresses in the Central Negev. "
-        "*BASOR* 236, 61–79."
-    )
+    assert line == ("Cohen, R. (1979). The Iron Age Fortresses in the Central Negev. *BASOR* 236, 61–79.")
 
 
 def test_bibliography_line_missing_venue() -> None:
@@ -395,18 +374,12 @@ def test_bibliography_line_particle_authors() -> None:
         title="Tell es-Safi radiocarbon",
         venue=Venue(name="Radiocarbon", volume="51", pages="100–110"),
     )
-    assert line == (
-        "van der Plicht, J., & Bruins, H. J. (2009). "
-        "Tell es-Safi radiocarbon. *Radiocarbon* 51, 100–110."
-    )
+    assert line == ("van der Plicht, J., & Bruins, H. J. (2009). Tell es-Safi radiocarbon. *Radiocarbon* 51, 100–110.")
 
 
 def test_bibliography_author_initial_multi_given() -> None:
     """Multi-token given names get multi-letter initials."""
-    assert (
-        _format_authors_full_bibliography(["Bruins, Hendrik Jan"])
-        == "Bruins, H. J."
-    )
+    assert _format_authors_full_bibliography(["Bruins, Hendrik Jan"]) == "Bruins, H. J."
 
 
 def test_bibliography_author_bare_family_no_initial() -> None:
@@ -459,9 +432,7 @@ def test_doi_hallucination_protection_test5() -> None:
         audit=_audit(),
         venue=Venue(name="BASOR", volume="314", pages="55–70"),
     )
-    assert ic.markdown == (
-        "[(Finkelstein 1999)](https://doi.org/10.2307/1357451)"
-    )
+    assert ic.markdown == ("[(Finkelstein 1999)](https://doi.org/10.2307/1357451)")
     assert ic.authoritative_authors_label == "Finkelstein 1999"
     assert "Finkelstein" in (ic.authoritative_bibliography_line or "")
     # Phantom Aharoni 1976 name must not appear in any tool-emitted field.
@@ -510,7 +481,9 @@ def test_bibliography_line_url_fallback_when_no_doi() -> None:
         primary_url="https://www.israelantiquities.org.il/publications/chapter/42",
     )
     assert line is not None
-    assert line.endswith(" URL: [israelantiquities.org.il/…](https://www.israelantiquities.org.il/publications/chapter/42)")
+    assert line.endswith(
+        " URL: [israelantiquities.org.il/…](https://www.israelantiquities.org.il/publications/chapter/42)"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -533,9 +506,7 @@ def test_aggregator_picks_domain_title_form_and_warns() -> None:
         audit=Audit(primary_source=False, aggregator=True, warn_marker=True),
     )
     assert ic.markdown.startswith("⚠️[(researchgate.net — ")
-    assert ic.markdown.endswith(
-        "](https://www.researchgate.net/publication/12345)"
-    )
+    assert ic.markdown.endswith("](https://www.researchgate.net/publication/12345)")
 
 
 def test_aggregator_without_title_falls_back_to_domain_only() -> None:
@@ -549,9 +520,7 @@ def test_aggregator_without_title_falls_back_to_domain_only() -> None:
         open_access_url=None,
         audit=Audit(primary_source=False, aggregator=True, warn_marker=True),
     )
-    assert ic.markdown == (
-        "⚠️[(books.google.com)](https://books.google.com/books?id=xyz)"
-    )
+    assert ic.markdown == ("⚠️[(books.google.com)](https://books.google.com/books?id=xyz)")
 
 
 def test_warn_marker_prefixes_link_form_only() -> None:
@@ -634,7 +603,5 @@ def test_anonymous_skips_authoryear_variant() -> None:
         audit=_audit(),
     )
     assert ic.authoritative_authors_label is None
-    assert ic.markdown == (
-        "[(example.org — Anonymous note)](https://example.org/x)"
-    )
+    assert ic.markdown == ("[(example.org — Anonymous note)](https://example.org/x)")
     assert ic.fallback_text == "Anon. 2024"

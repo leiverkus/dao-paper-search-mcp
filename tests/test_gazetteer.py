@@ -131,9 +131,7 @@ def test_record_to_site_full_mapping() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_gazetteer_impl_happy_path() -> None:
-    respx.get(GAZETTEER_SEARCH).mock(
-        return_value=httpx.Response(200, json={"total": 1, "result": [SAMPLE_KADESH]})
-    )
+    respx.get(GAZETTEER_SEARCH).mock(return_value=httpx.Response(200, json={"total": 1, "result": [SAMPLE_KADESH]}))
     sites = await search_gazetteer_impl("Kadesh", max_results=3)
     assert len(sites) == 1
     assert sites[0].gaz_id == "2043605"
@@ -142,9 +140,7 @@ async def test_search_gazetteer_impl_happy_path() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_resolve_site_impl_single_match_no_note() -> None:
-    respx.get(GAZETTEER_SEARCH).mock(
-        return_value=httpx.Response(200, json={"total": 1, "result": [SAMPLE_KADESH]})
-    )
+    respx.get(GAZETTEER_SEARCH).mock(return_value=httpx.Response(200, json={"total": 1, "result": [SAMPLE_KADESH]}))
     site = await resolve_site_impl("Kadesh-Barnea")
     assert site.gaz_id == "2043605"
     assert site.verification_note is None
@@ -155,9 +151,7 @@ async def test_resolve_site_impl_single_match_no_note() -> None:
 async def test_resolve_site_impl_multiple_packs_variants_and_note() -> None:
     second = {**SAMPLE_KADESH, "gazId": "9999", "prefName": {"title": "Other Place"}}
     respx.get(GAZETTEER_SEARCH).mock(
-        return_value=httpx.Response(
-            200, json={"total": 2, "result": [SAMPLE_KADESH, second]}
-        )
+        return_value=httpx.Response(200, json={"total": 2, "result": [SAMPLE_KADESH, second]})
     )
     site = await resolve_site_impl("Kadesh")
     assert site.gaz_id == "2043605"  # top hit
@@ -169,9 +163,7 @@ async def test_resolve_site_impl_multiple_packs_variants_and_note() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_resolve_site_impl_empty_returns_placeholder_with_note() -> None:
-    respx.get(GAZETTEER_SEARCH).mock(
-        return_value=httpx.Response(200, json={"total": 0, "result": []})
-    )
+    respx.get(GAZETTEER_SEARCH).mock(return_value=httpx.Response(200, json={"total": 0, "result": []}))
     site = await resolve_site_impl("Nowhereville")
     assert site.gaz_id == ""
     assert site.verification_note is not None

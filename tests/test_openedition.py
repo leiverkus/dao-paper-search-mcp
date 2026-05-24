@@ -23,7 +23,6 @@ from dao_paper_search_mcp.adapters.openedition import (
 )
 from dao_paper_search_mcp.models import DAOPaper
 
-
 # ---------------------------------------------------------------------------
 # Fixtures — shape-faithful OpenEdition oai_dc records (probed 2026-05-18)
 # ---------------------------------------------------------------------------
@@ -156,6 +155,7 @@ PAGE_TWO = """<?xml version="1.0" encoding="UTF-8"?>
 # Unit tests — pure functions
 # ---------------------------------------------------------------------------
 
+
 def test_resolve_set_spec_defaults_to_journals() -> None:
     assert _resolve_set_spec(None) == "journals"
     assert _resolve_set_spec("") == "journals"
@@ -231,6 +231,7 @@ def test_extract_year_empty() -> None:
 
 def test_extract_texts_filters_empty() -> None:
     import xml.etree.ElementTree as ET
+
     el1 = ET.fromstring("<dc:creator xmlns:dc='http://purl.org/dc/elements/1.1/'>Cohen, R.</dc:creator>")
     el2 = ET.fromstring("<dc:creator xmlns:dc='http://purl.org/dc/elements/1.1/'></dc:creator>")
     assert _extract_texts([el1, el2]) == ["Cohen, R."]
@@ -251,6 +252,7 @@ def test_record_matches_and_semantics() -> None:
 # ---------------------------------------------------------------------------
 # Parser tests
 # ---------------------------------------------------------------------------
+
 
 def test_parse_page_french_article_with_doi() -> None:
     tokens = _query_tokens("bronze age levant")
@@ -273,9 +275,7 @@ def test_parse_page_french_article_with_doi() -> None:
     assert p.abstract is not None
     assert "Bronze" in p.abstract
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown == (
-        "[(Rey-Valette & Rocle 2019)](https://doi.org/10.4000/vertigo.26537)"
-    )
+    assert p.inline_citation.markdown == ("[(Rey-Valette & Rocle 2019)](https://doi.org/10.4000/vertigo.26537)")
     assert token is None
 
 
@@ -393,12 +393,11 @@ def test_parse_page_handle_only_doi_or_id() -> None:
 # Integration tests (mocked HTTP)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_openedition_impl_happy_path() -> None:
-    respx.get(OPENEDITION_OAI).mock(
-        return_value=httpx.Response(200, text=SAMPLE_LISTRECORDS)
-    )
+    respx.get(OPENEDITION_OAI).mock(return_value=httpx.Response(200, text=SAMPLE_LISTRECORDS))
     results = await search_openedition_impl("bronze age levant", max_results=5)
     assert len(results) == 1
     p = results[0]
@@ -411,9 +410,7 @@ async def test_search_openedition_impl_happy_path() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_openedition_impl_empty() -> None:
-    respx.get(OPENEDITION_OAI).mock(
-        return_value=httpx.Response(200, text=EMPTY_LISTRECORDS)
-    )
+    respx.get(OPENEDITION_OAI).mock(return_value=httpx.Response(200, text=EMPTY_LISTRECORDS))
     assert await search_openedition_impl("xyzzy") == []
 
 
@@ -461,9 +458,7 @@ async def test_search_openedition_impl_stops_at_max_results() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_openedition_impl_defaults_to_journals_set() -> None:
-    route = respx.get(OPENEDITION_OAI).mock(
-        return_value=httpx.Response(200, text=EMPTY_LISTRECORDS)
-    )
+    route = respx.get(OPENEDITION_OAI).mock(return_value=httpx.Response(200, text=EMPTY_LISTRECORDS))
     await search_openedition_impl("anything")
     assert route.called
     sent_url = str(route.calls.last.request.url)
@@ -473,9 +468,7 @@ async def test_search_openedition_impl_defaults_to_journals_set() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_openedition_impl_all_drops_set_filter() -> None:
-    route = respx.get(OPENEDITION_OAI).mock(
-        return_value=httpx.Response(200, text=EMPTY_LISTRECORDS)
-    )
+    route = respx.get(OPENEDITION_OAI).mock(return_value=httpx.Response(200, text=EMPTY_LISTRECORDS))
     await search_openedition_impl("anything", collection="all")
     assert route.called
     sent_url = str(route.calls.last.request.url)
@@ -485,9 +478,7 @@ async def test_search_openedition_impl_all_drops_set_filter() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_search_openedition_impl_year_params_forwarded() -> None:
-    route = respx.get(OPENEDITION_OAI).mock(
-        return_value=httpx.Response(200, text=EMPTY_LISTRECORDS)
-    )
+    route = respx.get(OPENEDITION_OAI).mock(return_value=httpx.Response(200, text=EMPTY_LISTRECORDS))
     await search_openedition_impl("anything", year_from=2015, year_to=2020)
     assert route.called
     sent_url = str(route.calls.last.request.url)

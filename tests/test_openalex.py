@@ -19,7 +19,6 @@ from dao_paper_search_mcp.adapters.openalex import (
 )
 from dao_paper_search_mcp.models import DAOPaper, PublicationStatus
 
-
 # Realistic OpenAlex Work for Cohen 1979 BASOR.
 COHEN_1979_WORK = {
     "id": "https://openalex.org/W2031234567",
@@ -30,14 +29,8 @@ COHEN_1979_WORK = {
     "publication_date": "1979-01-01",
     "type": "journal-article",
     "language": "en",
-    "authorships": [
-        {"author": {"id": "A1", "display_name": "Rudolph Cohen"}}
-    ],
-    "primary_location": {
-        "source": {
-            "display_name": "Bulletin of the American Schools of Oriental Research"
-        }
-    },
+    "authorships": [{"author": {"id": "A1", "display_name": "Rudolph Cohen"}}],
+    "primary_location": {"source": {"display_name": "Bulletin of the American Schools of Oriental Research"}},
     "biblio": {"volume": "236", "first_page": "61", "last_page": "79"},
     "open_access": {"is_oa": False, "oa_url": None},
     "abstract_inverted_index": {
@@ -93,9 +86,7 @@ def test_format_authors_keeps_single_token_name_as_is() -> None:
 
 
 def test_format_journal_or_volume_combines() -> None:
-    assert _format_journal_or_volume(COHEN_1979_WORK) == (
-        "Bulletin of the American Schools of Oriental Research 236"
-    )
+    assert _format_journal_or_volume(COHEN_1979_WORK) == ("Bulletin of the American Schools of Oriental Research 236")
     # No source → None, not a guess.
     assert _format_journal_or_volume({"primary_location": {"source": None}}) is None
 
@@ -156,9 +147,7 @@ def test_work_to_paper_doi_form() -> None:
     assert p.abstract == "Iron Age fortresses in the Negev"
     # Inline citation: DOI present → Author-Year against doi.org.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown == (
-        "[(Cohen 1979)](https://doi.org/10.2307/1356668)"
-    )
+    assert p.inline_citation.markdown == ("[(Cohen 1979)](https://doi.org/10.2307/1356668)")
 
 
 def test_work_to_paper_no_doi_falls_back_to_openalex_landing() -> None:
@@ -174,9 +163,7 @@ def test_work_to_paper_no_doi_falls_back_to_openalex_landing() -> None:
     assert str(p.open_access_url) == "https://example.org/oa.pdf"
     # Inline citation: no DOI → Author-Year against openalex.org URL.
     assert p.inline_citation is not None
-    assert p.inline_citation.markdown == (
-        "[(Yisrael & Beit-Arieh 2022)](https://openalex.org/W9999000001)"
-    )
+    assert p.inline_citation.markdown == ("[(Yisrael & Beit-Arieh 2022)](https://openalex.org/W9999000001)")
 
 
 def test_work_without_doi_or_openalex_id_is_dropped() -> None:
