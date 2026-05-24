@@ -1,5 +1,10 @@
 # dao-paper-search-mcp
 
+[![Tests](https://github.com/leiverkus/dao-paper-search-mcp/actions/workflows/tests.yml/badge.svg)](https://github.com/leiverkus/dao-paper-search-mcp/actions/workflows/tests.yml)
+[![PyPI](https://img.shields.io/pypi/v/dao-paper-search-mcp)](https://pypi.org/project/dao-paper-search-mcp/)
+[![Python](https://img.shields.io/pypi/pyversions/dao-paper-search-mcp)](https://pypi.org/project/dao-paper-search-mcp/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 DAO-centred MCP server for academic research — Levant archaeology, biblical archaeology, Bronze/Iron Age, plus a curated cross-platform paper-search surface for the wider humanities. Started as a vertical complement to [`paper-search-mcp`](https://github.com/openags/paper-search-mcp); now also reimplements the cross-platform adapters that matter for DAO/DH workflows (Crossref, OpenAlex, Semantic Scholar, arXiv, CORE, Zenodo) so every hit carries the same pre-rendered `inline_citation` block.
 
 The DAO-specific sources (Zenon DAI, IAA Publications, ADAJ) are the original raison d'être and remain the strongest reason to use this server for Levantine archaeology. The horizontal adapters reduce the need to run `paper-search-mcp` alongside.
