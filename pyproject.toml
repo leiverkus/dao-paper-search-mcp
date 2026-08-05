@@ -1,6 +1,6 @@
 [project]
 name = "dao-paper-search-mcp"
-version = "1.0.0"
+version = "1.0.1"
 description = "MCP server for DAO-centred research: Zenon DAI, IAA Publications, ADAJ, plus a curated cross-platform paper-search surface (Crossref, OpenAlex, Semantic Scholar, arXiv, CORE, Zenodo, bioRxiv) — every hit pre-renders an inline_citation block for verbatim agent copy."
 readme = "README.md"
 license = { text = "MIT" }
@@ -19,7 +19,9 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "mcp>=1.12",
+    # Upper bound: mcp 2.0 removed mcp.server.fastmcp (replaced by
+    # mcp.server.mcpserver). Lift once server.py is migrated.
+    "mcp>=1.12,<2",
     "httpx>=0.27",
     "pydantic>=2.0",
     "beautifulsoup4>=4.12",

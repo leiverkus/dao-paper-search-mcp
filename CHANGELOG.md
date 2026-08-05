@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-08-05
+
+Hotfix release. No API or behaviour changes.
+
+### Fixed
+
+- Constrain the `mcp` dependency to `>=1.12,<2`. The `mcp` 2.0.0 release
+  removed `mcp.server.fastmcp` (superseded by `mcp.server.mcpserver`),
+  so the previously unbounded `mcp>=1.12` requirement resolved to 2.0.0
+  on fresh `uvx` installs and the server aborted at import with
+  `ModuleNotFoundError: No module named 'mcp.server.fastmcp'`. Existing
+  installs with a cached `mcp` 1.x environment were unaffected, which is
+  why the failure appeared without any change to this codebase.
+
+  Migrating `server.py` to the `mcp` 2.x API is tracked separately; the
+  upper bound is a stopgap and should be lifted once that lands.
+
 ## [1.0.0] - 2026-05-24
 
 First PyPI release and 1.0 API stability commitment. QA infrastructure
