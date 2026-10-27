@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-27
+
+Minor release: `search_crossref` looks a DOI up directly. Tool names and
+arguments are unchanged; a DOI query now returns the work it names, or nothing.
+
 ### Added
 
 - **`search_crossref` looks a DOI up instead of searching for it.** A query that is
