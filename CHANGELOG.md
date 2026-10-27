@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`search_crossref` looks a DOI up instead of searching for it.** A query that is
+  one DOI — bare, `doi:…`, or a `doi.org` URL, in any case — goes to
+  `GET /works/{doi}` and returns exactly that record. A DOI Crossref does not know
+  returns an empty list. There is deliberately no fallback to a search: for a DOI,
+  a fuzzy match is wrong metadata presented as verified.
+
+### Fixed
+
+- **A DOI passed to `search_crossref` returned a different work.** The tool's
+  docstring promised verification "by DOI", but the DOI went through
+  `query.bibliographic` like any free text. For
+  `10.1179/tav.1996.1996.2.170` (Finkelstein 1996, *Tel Aviv*) the first of three
+  hits was an unrelated 2024 article, with or without the `https://doi.org/` prefix.
+  Clients verifying a citation by DOI got that article's `inline_citation` and
+  `authoritative_bibliography_line`. Detection is stricter than `normalize_doi`, so
+  free text that merely starts with `10.` ("10. Jahrhundert …") is still searched.
+
 ## [1.1.0] - 2026-10-27
 
 Minor release: the SDK dependency changes major (`mcp` 1.x → 2.x). Tool names,

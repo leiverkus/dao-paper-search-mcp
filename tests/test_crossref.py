@@ -13,6 +13,7 @@ import respx
 from dao_paper_search_mcp.adapters.crossref import (
     CROSSREF_API,
     _build_params,
+    _doi_from_query,
     _extract_year,
     _format_authors,
     _format_journal_or_volume,
@@ -290,3 +291,84 @@ async def test_search_crossref_impl_sends_polite_user_agent() -> None:
     ua = route.calls.last.request.headers.get("User-Agent", "")
     assert "dao-paper-search-mcp" in ua
     assert "mailto:" in ua
+
+
+# --- DOI lookup -------------------------------------------------------------
+# A DOI sent through query.bibliographic is just a string to match, and the
+# first hit was observed to be a different work (2026-10-27). A DOI query must
+# return the record the DOI names, or nothing — never a fuzzy match.
+
+COHEN_DOI_URL = f"{CROSSREF_API}/10.2307/1356668"
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "10.2307/1356668",
+        "  10.2307/1356668  ",
+        "doi:10.2307/1356668",
+        "https://doi.org/10.2307/1356668",
+        "https://dx.doi.org/10.2307/1356668",
+        "10.2307/1356668".upper(),
+    ],
+)
+def test_doi_from_query_recognises_a_doi(query: str) -> None:
+    assert _doi_from_query(query) == "10.2307/1356668"
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "10. Jahrhundert Megiddo",  # starts with "10." but is free text
+        "Finkelstein 10.1179/tav.1996.1996.2.170",  # DOI inside a longer query
+        "10.12/short-registrant",  # registrant code too short to be a DOI
+        "Iron Age fortresses Negev",
+        "",
+    ],
+)
+def test_doi_from_query_leaves_free_text_alone(query: str) -> None:
+    assert _doi_from_query(query) is None
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_doi_query_is_looked_up_not_searched() -> None:
+    search = respx.get(CROSSREF_API).mock(return_value=httpx.Response(500))
+    lookup = respx.get(COHEN_DOI_URL).mock(
+        return_value=httpx.Response(200, json={"status": "ok", "message": COHEN_1979_ITEM})
+    )
+    results = await search_crossref_impl("https://doi.org/10.2307/1356668", max_results=5, year_from=1990)
+    assert lookup.called
+    assert not search.called
+    assert [p.doi_or_id for p in results] == ["10.2307/1356668"]
+    assert results[0].inline_citation is not None
+    assert results[0].inline_citation.markdown.startswith("[(Cohen 1979)]")
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_unknown_doi_returns_nothing_and_does_not_fall_back_to_search() -> None:
+    search = respx.get(CROSSREF_API).mock(
+        return_value=httpx.Response(200, json={"status": "ok", "message": {"items": [COHEN_1979_ITEM]}})
+    )
+    respx.get(f"{CROSSREF_API}/10.9999/does-not-exist").mock(return_value=httpx.Response(404))
+    assert await search_crossref_impl("10.9999/does-not-exist") == []
+    assert not search.called
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_doi_lookup_server_error_raises() -> None:
+    respx.get(COHEN_DOI_URL).mock(return_value=httpx.Response(503))
+    with pytest.raises(httpx.HTTPStatusError):
+        await search_crossref_impl("10.2307/1356668")
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_doi_lookup_sends_polite_user_agent() -> None:
+    route = respx.get(COHEN_DOI_URL).mock(
+        return_value=httpx.Response(200, json={"status": "ok", "message": COHEN_1979_ITEM})
+    )
+    await search_crossref_impl("10.2307/1356668")
+    assert "mailto:" in route.calls.last.request.headers.get("User-Agent", "")
