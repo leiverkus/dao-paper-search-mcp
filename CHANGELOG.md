@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-27
+
+Minor release: the SDK dependency changes major (`mcp` 1.x → 2.x). Tool names,
+arguments and responses are unchanged.
+
 ### Changed
 
 - **Migrated to the `mcp` 2.x SDK.** The server is built on
