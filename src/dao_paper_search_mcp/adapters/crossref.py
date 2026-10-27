@@ -32,7 +32,7 @@ from collections.abc import Mapping
 from typing import Any
 
 import httpx
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus, Venue
@@ -267,7 +267,7 @@ async def search_crossref_impl(
         return await _run(c)
 
 
-def register(mcp: FastMCP) -> None:
+def register(mcp: MCPServer) -> None:
     """Register the ``search_crossref`` tool."""
 
     @mcp.tool()

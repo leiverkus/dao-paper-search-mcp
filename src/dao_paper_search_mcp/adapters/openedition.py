@@ -59,7 +59,7 @@ import time
 import xml.etree.ElementTree as ET
 
 import httpx
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from ..inline_citation import build_inline_citation
 from ..models import Audit, DAOPaper, Identifiers, PublicationStatus
@@ -405,7 +405,7 @@ async def search_openedition_impl(
         return await _run(c)
 
 
-def register(mcp: FastMCP) -> None:
+def register(mcp: MCPServer) -> None:
     """Register the ``search_openedition`` tool."""
 
     @mcp.tool()

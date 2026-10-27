@@ -19,7 +19,7 @@ from collections.abc import Mapping
 from typing import Any
 
 import httpx
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from ..models import ResolvedSite
 
@@ -173,7 +173,7 @@ async def resolve_site_impl(
     return primary
 
 
-def register(mcp: FastMCP) -> None:
+def register(mcp: MCPServer) -> None:
     """Register the ``resolve_site`` MCP tool."""
 
     @mcp.tool()
