@@ -21,6 +21,14 @@ Query shape
   noisy queries)
 - ``filter=from-pub-date:YYYY,until-pub-date:YYYY`` — year range
 
+DOI lookup
+----------
+A query that IS a DOI (bare, ``doi:``, or a ``doi.org`` URL) is not searched
+but looked up: ``GET /works/{doi}`` returns exactly that record. Sent through
+``query.bibliographic`` instead, a DOI is just another string to match, and the
+first hit is routinely a different work — wrong metadata presented as verified.
+A DOI Crossref does not know returns an empty list, never a fuzzy fallback.
+
 No internal calls to other adapters. Architecture principle #2.
 """
 
@@ -30,6 +38,7 @@ import logging
 import re
 from collections.abc import Mapping
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 from mcp.server.mcpserver import MCPServer
@@ -53,6 +62,11 @@ _USER_AGENT = f"dao-paper-search-mcp/0.1 (+https://github.com/leiverkus/dao-pape
 # readable plain text. Crossref embeds JATS XML inside the abstract
 # field on most journal articles.
 _JATS_TAG_RE = re.compile(r"<[^>]+>")
+
+# A whole query that is one DOI: ``10.<registrant>/<suffix>``, no whitespace.
+# Stricter than ``normalize_doi`` (which accepts anything starting ``10.``) so
+# that a free-text query such as "10. Jahrhundert Megiddo" is still searched.
+_DOI_QUERY_RE = re.compile(r"10\.\d{4,9}/\S+")
 _JATS_WS_RE = re.compile(r"\s+")
 
 
@@ -239,6 +253,28 @@ def _build_params(
     return params
 
 
+def _doi_from_query(query: str) -> str | None:
+    """Return the normalised DOI if the whole query is one DOI, else None."""
+    doi = normalize_doi(query)
+    if doi is None or not _DOI_QUERY_RE.fullmatch(doi):
+        return None
+    return doi
+
+
+async def _lookup_doi(c: httpx.AsyncClient, doi: str) -> list[DAOPaper]:
+    """``GET /works/{doi}``: the one record, or ``[]`` if Crossref has none."""
+    headers = {"User-Agent": _USER_AGENT, "Accept": "application/json"}
+    r = await c.get(f"{CROSSREF_API}/{quote(doi, safe='/')}", headers=headers, timeout=HTTP_TIMEOUT)
+    if r.status_code == 404:
+        log.info("crossref.lookup doi=%r not found", doi)
+        return []
+    r.raise_for_status()
+    item = (r.json() or {}).get("message") or {}
+    paper = _item_to_paper(item)
+    log.info("crossref.lookup doi=%r found=%s", doi, paper is not None)
+    return [paper] if paper is not None else []
+
+
 async def search_crossref_impl(
     query: str,
     max_results: int = 10,
@@ -247,7 +283,18 @@ async def search_crossref_impl(
     *,
     client: httpx.AsyncClient | None = None,
 ) -> list[DAOPaper]:
-    """Search Crossref. ``client`` is injectable for tests."""
+    """Search Crossref, or look the work up directly when ``query`` is a DOI.
+
+    ``client`` is injectable for tests. A DOI lookup ignores ``max_results``
+    and the year filters: it returns the one work the DOI names, or nothing.
+    """
+    doi = _doi_from_query(query)
+    if doi is not None:
+        if client is not None:
+            return await _lookup_doi(client, doi)
+        async with httpx.AsyncClient() as c:
+            return await _lookup_doi(c, doi)
+
     params = _build_params(query, max_results, year_from, year_to)
     log.info("crossref.search query=%r filters=%s", query, params[2:])
 
@@ -282,6 +329,11 @@ def register(mcp: MCPServer) -> None:
         (Cambridge, Wiley, Elsevier, Tandfonline, etc.) by DOI or
         bibliographic query.
 
+        To verify one work, pass its DOI as ``query`` (bare, ``doi:…`` or a
+        ``https://doi.org/…`` URL): it is looked up directly and returns
+        exactly that record, or an empty list if Crossref does not know the
+        DOI. Any other query is a bibliographic search.
+
         Every hit has a DOI, so the inline-citation will always be in
         ``[(Author Year)](https://doi.org/...)`` form for academic
         body-text rendering.
@@ -296,10 +348,11 @@ def register(mcp: MCPServer) -> None:
         reference line from training knowledge.
 
         Args:
-            query: free-text bibliographic query (matches title, authors,
-                journal, ISSN, ISBN, DOI). Boolean operators are not
-                supported by Crossref — just space-separate terms.
-            max_results: 1-100.
+            query: a DOI for a direct lookup, or a free-text bibliographic
+                query (matches title, authors, journal, ISSN, ISBN). Boolean
+                operators are not supported by Crossref — just space-separate
+                terms.
+            max_results: 1-100. Ignored for a DOI lookup.
             year_from: lower bound publication year, inclusive.
             year_to: upper bound publication year, inclusive.
         """
