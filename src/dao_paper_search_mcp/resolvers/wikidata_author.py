@@ -27,7 +27,7 @@ from typing import Any
 
 import httpx
 import yaml
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from ..models import ResolvedAuthor
 from ..utils.contact import CONTACT_EMAIL
@@ -367,7 +367,7 @@ async def resolve_author_impl(
         return await _run(c)
 
 
-def register(mcp: FastMCP) -> None:
+def register(mcp: MCPServer) -> None:
     """Register the ``resolve_author`` tool."""
 
     @mcp.tool()

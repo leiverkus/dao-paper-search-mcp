@@ -9,8 +9,9 @@ from __future__ import annotations
 import logging
 import sys
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
+from . import __version__
 from .adapters import adaj as _adaj
 from .adapters import arxiv as _arxiv
 from .adapters import biorxiv as _biorxiv
@@ -35,7 +36,9 @@ logging.basicConfig(
 )
 log = logging.getLogger("dao_paper_search_mcp")
 
-mcp = FastMCP("dao-paper-search-mcp")
+# mcp 2.x reports an empty serverInfo.version unless one is given (1.x sent
+# the SDK's own version). Report this package's.
+mcp = MCPServer("dao-paper-search-mcp", version=__version__)
 
 
 @mcp.tool()

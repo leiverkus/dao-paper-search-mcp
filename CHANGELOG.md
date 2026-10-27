@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Migrated to the `mcp` 2.x SDK.** The server is built on
+  `mcp.server.mcpserver.MCPServer`, which replaced `FastMCP` in `mcp` 2.0; the
+  dependency moves from `mcp>=1.12,<2` to `mcp>=2.3,<3`. This lifts the stopgap
+  bound from 1.0.1. The upper bound stays, one major ahead, so the next breaking
+  SDK release cannot reach a fresh `uvx` install unannounced, as 2.0 did.
+
+  No tool changes. `tools/list` was recorded under `mcp` 1.27.1 before the
+  migration and compared after it: all 17 tools, with descriptions and input and
+  output schemas, are identical, and a live `search_crossref` call returns
+  identical structured content, `inline_citation` and `audit` included.
+
+### Fixed
+
+- **`serverInfo.version` reports this package's version.** Under 1.x it carried the
+  SDK's own version (e.g. `1.27.1`), and 2.x would have sent an empty string. It now
+  comes from the installed package metadata, as does `__version__`, which had stayed
+  at `0.1.0` since the first commit.
+
+### Added
+
+- `tests/test_server.py` pins the registered tool names, so an SDK change that
+  drops a tool fails the build instead of a client's call.
+
 ## [1.0.1] - 2026-08-05
 
 Hotfix release. No API or behaviour changes.
